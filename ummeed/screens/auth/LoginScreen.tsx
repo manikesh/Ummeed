@@ -40,7 +40,7 @@ export function LoginScreen({ intendedRole }: { intendedRole: AppRole }) {
     setLoading(true);
     try {
       await sendOtp(email, intendedRole, fullName, phone);
-      Alert.alert('Code sent', 'Check your email for the 6-digit code.');
+      Alert.alert('Dev mode', 'OTP delivery is bypassed. Use code 123456 on the next screen to sign in.');
       push({ name: 'otp', email, intendedRole });
     } catch (e: any) {
       setErr(e?.message ?? 'Could not send code.');

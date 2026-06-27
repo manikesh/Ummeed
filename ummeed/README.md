@@ -11,50 +11,38 @@
 
 ---
 
-## 1. One-time Supabase setup (~5 minutes)
+## 1. Supabase setup — already done ✅
 
-The Supabase project is already configured in `.env`:
+The Supabase project (`vlztioqltxykcusrxsmi`) has been fully configured for you:
+- Schema applied (6 tables + 2 storage buckets + RLS + triggers + 5 seed hospitals + 10 seed content items)
+- `mailer_autoconfirm = true` so sign-up creates a session instantly without sending email
+- Anon key is already in `.env`
 
-```
-EXPO_PUBLIC_SUPABASE_URL=https://vlztioqltxykcusrxsmi.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiI...
-```
+### Dev-mode OTP (important)
 
-You must do **two things** in the Supabase dashboard before the app works:
+Because the project is on the Supabase free tier, the email template cannot
+be modified to embed the 6-digit code as plain text. As a temporary
+stand-in, the app **accepts the hardcoded OTP `123456` for any email**. When
+that code is entered, the app signs the user in (or signs them up) using a
+deterministic email+password pair — so a **real Supabase session** is created
+and RLS works exactly like it will in production.
 
-### 1a. Run the schema
+To switch back to real email OTP later:
+1. Add a custom SMTP provider in Supabase Auth → SMTP Settings (Resend, SendGrid, etc.).
+2. Open `contexts/AuthContext.tsx` and flip `USE_OTP_BYPASS` to `false`.
+3. Update the Magic Link email template (Auth → Email Templates) to include `{{ .Token }}`.
 
-1. Open https://supabase.com/dashboard/project/vlztioqltxykcusrxsmi/sql/new
-2. Paste the entire contents of **`supabase/schema.sql`** and click **Run**.
-3. You should see *Success. No rows returned* (it also seeds 5 hospitals and 10 content items).
+### To create an admin user
 
-### 1b. Switch the OTP email template from magic-link to 6-digit code
-
-Supabase's default email template sends a *magic-link*. We want the **6-digit token**.
-
-1. Open https://supabase.com/dashboard/project/vlztioqltxykcusrxsmi/auth/templates
-2. Select **"Magic Link"** template.
-3. Replace the body with the snippet below (the important line is `{{ .Token }}`) and **Save**:
-
-```html
-<h2>Your Ummeed sign-in code</h2>
-<p>Hello,</p>
-<p>Your 6-digit Ummeed verification code is:</p>
-<h1 style="letter-spacing:6px">{{ .Token }}</h1>
-<p>This code will expire in 60 minutes. If you did not request it, ignore this email.</p>
-```
-
-> If you want SMS OTP later, configure Twilio in Supabase Auth → Providers → Phone.
-
-### 1c. Create an admin user (optional but recommended)
-
-After you sign in once as `admin@yourdomain.com` (via the app), promote that user:
+After your first sign-in (any email + code `123456`), grant yourself admin from the Supabase SQL editor:
 
 ```sql
 update public.profiles
 set role = 'admin', verification_status = 'approved'
-where id = (select id from auth.users where email = 'admin@yourdomain.com');
+where id = (select id from auth.users where email = 'your-email@example.com');
 ```
+
+Sign out and sign back in — you'll land on the Admin dashboard.
 
 ---
 

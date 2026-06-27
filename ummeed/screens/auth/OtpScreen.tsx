@@ -48,7 +48,7 @@ export function OtpScreen({ email, intendedRole }: { email: string; intendedRole
   };
 
   return (
-    <Screen title="Enter your code" subtitle={`We sent a 6-digit code to ${email}`}>
+    <Screen title="Enter your code" subtitle={`Dev mode: enter 123456 to sign in as ${email}`}>
       <Input
         label="6-digit code"
         placeholder="123456"
