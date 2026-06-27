@@ -5,22 +5,52 @@ import type { AppRole, Profile } from '../lib/types';
 
 /**
  * ──────────────────────────────────────────────────────────────────────────────
- * Dev OTP bypass
- * The Supabase project is on the free tier and email-template editing is
- * blocked, which means the real OTP code can't be delivered as plain text to
- * the user. As a temporary stand-in, the app accepts the hardcoded OTP
- * "123456" for ANY email. Behind the scenes we sign in (or sign up) the user
- * with a deterministic password derived from their email, so a real Supabase
- * session is created and RLS continues to work normally.
+ * Phone-OTP auth (dev bypass mode)
  *
- * To switch back to real email OTP later, set USE_OTP_BYPASS = false,
- * configure a custom SMTP provider in Supabase, and replace the body of
- * sendOtp / verifyOtp with supabase.auth.signInWithOtp / verifyOtp.
+ * The user signs in with a 10-digit Indian mobile number. Supabase free tier
+ * has no SMS provider configured, so we use a stand-in:
+ *   - The app accepts the hardcoded OTP "123456" for any phone number.
+ *   - Behind the scenes the phone is mapped to a synthetic email
+ *     `p{phone}@ummeed.local` and signed in with a deterministic password,
+ *     so a REAL Supabase session is created and RLS still applies.
+ *
+ * To switch to real SMS OTP later:
+ *   1. In Supabase Auth → Providers → Phone, enable a provider (Twilio,
+ *      MessageBird etc.) and add credentials.
+ *   2. Set USE_OTP_BYPASS = false below.
+ *   3. The non-bypass branches already call signInWithOtp / verifyOtp with
+ *      `{ phone, type: 'sms' }` — they will start working automatically.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 const USE_OTP_BYPASS = true;
 const BYPASS_CODE = '123456';
-const devPassword = (email: string) => `ummeed-dev::${email.trim().toLowerCase()}::v1`;
+
+/** Normalise to bare 10-digit Indian mobile (strips +91, leading 0, spaces). */
+export function normalizePhone(raw: string): string {
+  const digits = (raw || '').replace(/\D+/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
+  return digits;
+}
+
+/** True if the input is a valid 10-digit Indian mobile number. */
+export function isValidPhone(raw: string): boolean {
+  const p = normalizePhone(raw);
+  return /^[6-9]\d{9}$/.test(p);
+}
+
+/** E.164 form for storage / display (always +91...). */
+export function toE164(raw: string): string {
+  return `+91${normalizePhone(raw)}`;
+}
+
+/** Map a phone number to a deterministic synthetic email for Supabase auth. */
+function phoneToEmail(raw: string): string {
+  return `p${normalizePhone(raw)}@ummeed.local`;
+}
+
+const devPassword = (phone: string) =>
+  `ummeed-dev::${normalizePhone(phone)}::v1`;
 
 interface AuthState {
   session: Session | null;
@@ -28,19 +58,20 @@ interface AuthState {
   loading: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
-  sendOtp: (email: string, intendedRole: AppRole, fullName?: string, phone?: string) => Promise<void>;
-  verifyOtp: (email: string, token: string) => Promise<void>;
+  /** Send the OTP to a phone number (bypassed in dev — accepts 123456). */
+  sendOtp: (phone: string, intendedRole: AppRole, fullName?: string) => Promise<void>;
+  /** Verify the OTP. token must be the 6-digit code. */
+  verifyOtp: (phone: string, token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// Module-scoped cache: the role / name / phone the user just entered on the
-// Login screen — used by verifyOtp if we need to sign-up the user on the fly.
+// Module-scoped cache: the role / name the user just entered on the Login
+// screen — used by verifyOtp if we need to sign-up the user on the fly.
 let pendingSignup: {
-  email: string;
+  phone: string;
   role: AppRole;
   fullName?: string;
-  phone?: string;
 } | null = null;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -95,22 +126,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
   }, []);
 
-  // sendOtp: in bypass mode we don't actually send anything; we just remember
-  // the intended role/name so verifyOtp can create the account on the fly.
+  // sendOtp: in bypass mode we don't send anything; just remember the
+  // metadata so verifyOtp can sign the user up on the fly.
   const sendOtp = useCallback(
-    async (email: string, intendedRole: AppRole, fullName?: string, phone?: string) => {
-      const normalized = email.trim().toLowerCase();
-      pendingSignup = { email: normalized, role: intendedRole, fullName, phone };
+    async (phone: string, intendedRole: AppRole, fullName?: string) => {
+      if (!isValidPhone(phone)) {
+        throw new Error('Please enter a valid 10-digit Indian mobile number.');
+      }
+      const p = normalizePhone(phone);
+      pendingSignup = { phone: p, role: intendedRole, fullName };
 
       if (USE_OTP_BYPASS) {
-        // No-op in bypass. We just preserve the metadata for verifyOtp.
-        return;
+        return; // no-op
       }
+      // Real SMS OTP path (works once a phone provider is configured in Supabase).
       const { error } = await supabase.auth.signInWithOtp({
-        email: normalized,
+        phone: toE164(p),
         options: {
           shouldCreateUser: true,
-          data: { role: intendedRole, full_name: fullName ?? '', phone: phone ?? '' },
+          data: { role: intendedRole, full_name: fullName ?? '', phone: toE164(p) },
         },
       });
       if (error) throw error;
@@ -118,46 +152,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  // verifyOtp: in bypass mode any 123456 signs the user in (or up). Behind the
-  // scenes we use email + deterministic password so we always get a real
-  // Supabase session and RLS still applies.
-  const verifyOtp = useCallback(async (email: string, token: string) => {
-    const normalized = email.trim().toLowerCase();
+  // verifyOtp: in bypass mode any 123456 signs the user in (or up).
+  const verifyOtp = useCallback(async (phone: string, token: string) => {
+    if (!isValidPhone(phone)) {
+      throw new Error('Please enter a valid 10-digit Indian mobile number.');
+    }
+    const p = normalizePhone(phone);
 
     if (USE_OTP_BYPASS) {
       if (token.trim() !== BYPASS_CODE) {
         throw new Error(`Invalid code. (Hint: in dev mode the code is ${BYPASS_CODE}.)`);
       }
-      const password = devPassword(normalized);
+      const syntheticEmail = phoneToEmail(p);
+      const password = devPassword(p);
 
       // 1) try signin
-      const signIn = await supabase.auth.signInWithPassword({ email: normalized, password });
+      const signIn = await supabase.auth.signInWithPassword({
+        email: syntheticEmail,
+        password,
+      });
       if (!signIn.error) return;
 
-      // 2) sign up (auto-confirm is on, so this creates a session immediately)
-      const meta = pendingSignup && pendingSignup.email === normalized
-        ? { role: pendingSignup.role, full_name: pendingSignup.fullName ?? '', phone: pendingSignup.phone ?? '' }
-        : { role: 'patient' as AppRole, full_name: '', phone: '' };
+      // 2) sign up (auto-confirm is on)
+      const meta =
+        pendingSignup && pendingSignup.phone === p
+          ? {
+              role: pendingSignup.role,
+              full_name: pendingSignup.fullName ?? '',
+              phone: toE164(p),
+            }
+          : { role: 'patient' as AppRole, full_name: '', phone: toE164(p) };
       const signUp = await supabase.auth.signUp({
-        email: normalized,
+        email: syntheticEmail,
         password,
         options: { data: meta },
       });
       if (signUp.error) throw signUp.error;
 
-      // 3) if signUp didn't return a session (rare on free tier even with
-      // autoconfirm), try signing in once more.
+      // 3) retry signin if needed
       if (!signUp.data.session) {
-        const retry = await supabase.auth.signInWithPassword({ email: normalized, password });
+        const retry = await supabase.auth.signInWithPassword({
+          email: syntheticEmail,
+          password,
+        });
         if (retry.error) throw retry.error;
       }
       return;
     }
 
+    // Real SMS OTP path.
     const { error } = await supabase.auth.verifyOtp({
-      email: normalized,
+      phone: toE164(p),
       token: token.trim(),
-      type: 'email',
+      type: 'sms',
     });
     if (error) throw error;
   }, []);

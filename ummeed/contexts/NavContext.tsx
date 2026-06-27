@@ -5,7 +5,7 @@ export type Nav =
   | { name: 'welcome' }
   | { name: 'role-select' }
   | { name: 'login'; intendedRole: import('../lib/types').AppRole }
-  | { name: 'otp'; email: string; intendedRole: import('../lib/types').AppRole }
+  | { name: 'otp'; phone: string; intendedRole: import('../lib/types').AppRole }
   | { name: 'pending-approval' }
   // patient
   | { name: 'patient-home' }

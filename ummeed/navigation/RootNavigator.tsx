@@ -48,7 +48,7 @@ function renderScreen(current: Nav) {
     case 'login':
       return <LoginScreen intendedRole={current.intendedRole} />;
     case 'otp':
-      return <OtpScreen email={current.email} intendedRole={current.intendedRole} />;
+      return <OtpScreen phone={current.phone} intendedRole={current.intendedRole} />;
     case 'pending-approval':
       return <PendingApprovalScreen />;
     case 'patient-home':

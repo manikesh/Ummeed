@@ -54,6 +54,7 @@ create table if not exists public.profiles (
 
 create index if not exists profiles_role_idx on public.profiles(role);
 create index if not exists profiles_verification_idx on public.profiles(verification_status);
+create unique index if not exists profiles_phone_unique on public.profiles(phone) where phone is not null;
 
 -- ---------------------------------------------------------------------
 -- 3) hospitals  (admin-managed)

@@ -3,7 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
-import { useAuth } from '../../contexts/AuthContext';
+import { isValidPhone, normalizePhone, useAuth } from '../../contexts/AuthContext';
 import { useNav } from '../../contexts/NavContext';
 import type { AppRole } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
@@ -21,27 +21,27 @@ const ROLE_LABEL: Record<AppRole, string> = {
 export function LoginScreen({ intendedRole }: { intendedRole: AppRole }) {
   const { sendOtp } = useAuth();
   const { push } = useNav();
-  const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const onSend = async () => {
     setErr(null);
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setErr('Please enter a valid email.');
-      return;
-    }
     if (!fullName.trim()) {
       setErr('Please enter your full name.');
       return;
     }
+    if (!isValidPhone(phone)) {
+      setErr('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    const normalized = normalizePhone(phone);
     setLoading(true);
     try {
-      await sendOtp(email, intendedRole, fullName, phone);
+      await sendOtp(normalized, intendedRole, fullName);
       Alert.alert('Dev mode', 'OTP delivery is bypassed. Use code 123456 on the next screen to sign in.');
-      push({ name: 'otp', email, intendedRole });
+      push({ name: 'otp', phone: normalized, intendedRole });
     } catch (e: any) {
       setErr(e?.message ?? 'Could not send code.');
     } finally {
@@ -52,7 +52,7 @@ export function LoginScreen({ intendedRole }: { intendedRole: AppRole }) {
   return (
     <Screen title="Sign in" subtitle={`Signing in as: ${ROLE_LABEL[intendedRole]}`}>
       <Text style={styles.help}>
-        We will email you a 6-digit code. No password needed.
+        We will send a 6-digit code to your mobile number. No password needed.
       </Text>
       <View style={{ height: spacing.md }} />
 
@@ -65,21 +65,14 @@ export function LoginScreen({ intendedRole }: { intendedRole: AppRole }) {
         testID="login-name"
       />
       <Input
-        label="Email"
-        placeholder="you@example.com"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        testID="login-email"
-      />
-      <Input
-        label="Phone (optional)"
-        placeholder="+91…"
+        label="Mobile number"
+        placeholder="10-digit mobile (e.g. 9876543210)"
         value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
+        onChangeText={(t) => setPhone(t.replace(/[^\d]/g, '').slice(0, 10))}
+        keyboardType="number-pad"
+        autoComplete="tel"
+        maxLength={10}
+        hint="We only support Indian (+91) numbers for now."
         testID="login-phone"
       />
       {err ? <Text style={styles.err}>{err}</Text> : null}

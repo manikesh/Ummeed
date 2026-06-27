@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { AppRole } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
 
-export function OtpScreen({ email, intendedRole }: { email: string; intendedRole: AppRole }) {
+export function OtpScreen({ phone, intendedRole }: { phone: string; intendedRole: AppRole }) {
   const { verifyOtp, sendOtp } = useAuth();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,17 +15,19 @@ export function OtpScreen({ email, intendedRole }: { email: string; intendedRole
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  const display = `+91 ${phone.slice(0, 5)} ${phone.slice(5)}`;
+
   const onVerify = async () => {
     setErr(null);
     setInfo(null);
     if (code.length < 6) {
-      setErr('Enter the 6-digit code from your email.');
+      setErr('Enter the 6-digit code.');
       return;
     }
     setLoading(true);
     try {
-      await verifyOtp(email, code);
-      // AuthProvider auto-loads profile; RootNavigator will switch screens.
+      await verifyOtp(phone, code);
+      // RootNavigator switches screens after session is set.
     } catch (e: any) {
       setErr(e?.message ?? 'Invalid or expired code. Try again.');
     } finally {
@@ -38,8 +40,8 @@ export function OtpScreen({ email, intendedRole }: { email: string; intendedRole
     setInfo(null);
     setResending(true);
     try {
-      await sendOtp(email, intendedRole);
-      setInfo('We sent a new code to your email.');
+      await sendOtp(phone, intendedRole);
+      setInfo('Dev mode: the code is 123456.');
     } catch (e: any) {
       setErr(e?.message ?? 'Could not resend code.');
     } finally {
@@ -48,7 +50,7 @@ export function OtpScreen({ email, intendedRole }: { email: string; intendedRole
   };
 
   return (
-    <Screen title="Enter your code" subtitle={`Dev mode: enter 123456 to sign in as ${email}`}>
+    <Screen title="Enter your code" subtitle={`Dev mode: enter 123456 to sign in as ${display}`}>
       <Input
         label="6-digit code"
         placeholder="123456"

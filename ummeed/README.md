@@ -20,29 +20,38 @@ The Supabase project (`vlztioqltxykcusrxsmi`) has been fully configured for you:
 
 ### Dev-mode OTP (important)
 
-Because the project is on the Supabase free tier, the email template cannot
-be modified to embed the 6-digit code as plain text. As a temporary
-stand-in, the app **accepts the hardcoded OTP `123456` for any email**. When
-that code is entered, the app signs the user in (or signs them up) using a
-deterministic email+password pair — so a **real Supabase session** is created
-and RLS works exactly like it will in production.
+The app uses **10-digit Indian mobile-number** sign-in. Because the project
+is on the Supabase free tier and has no SMS provider configured, the app
+**accepts the hardcoded OTP `123456` for any phone**. Behind the scenes the
+phone is mapped to an internal email+password pair so a **real Supabase
+session** is created and RLS works exactly like in production.
 
-To switch back to real email OTP later:
-1. Add a custom SMTP provider in Supabase Auth → SMTP Settings (Resend, SendGrid, etc.).
+To switch back to real SMS OTP later:
+1. Enable a phone provider in Supabase Auth → Providers → Phone (Twilio etc).
 2. Open `contexts/AuthContext.tsx` and flip `USE_OTP_BYPASS` to `false`.
-3. Update the Magic Link email template (Auth → Email Templates) to include `{{ .Token }}`.
+3. The non-bypass branches already call `signInWithOtp({phone})` / `verifyOtp({phone, type: 'sms'})` — they will start working automatically.
 
-### To create an admin user
+### Pre-seeded sample users (OTP = `123456`)
 
-After your first sign-in (any email + code `123456`), grant yourself admin from the Supabase SQL editor:
+| Role | Phone | Name |
+|---|---|---|
+| 👑 admin | 9000000001 | Ummeed Admin |
+| 🩺 doctor | 9811000011 | Dr. Aarav Kapoor (Safdarjung, New Delhi) |
+| 🩺 doctor | 9900112233 | Dr. Meera Iyer (Kidwai, Bengaluru) |
+| 🤝 ngo | 9833052684 | Sneha Foundation (Mumbai) |
+| 🤝 ngo | 9582105106 | Stop Acid Attacks (New Delhi) |
+| 🧠 counselor | 9004778899 | Priya Nair (Pune) |
+| ⚖️ legal_aid | 9810505050 | Adv. Suresh Rao (New Delhi) |
+
+### To create more admins later
+
+Sign up once with the phone you want, then run in the Supabase SQL editor:
 
 ```sql
 update public.profiles
 set role = 'admin', verification_status = 'approved'
-where id = (select id from auth.users where email = 'your-email@example.com');
+where phone = '+91XXXXXXXXXX';
 ```
-
-Sign out and sign back in — you'll land on the Admin dashboard.
 
 ---
 
