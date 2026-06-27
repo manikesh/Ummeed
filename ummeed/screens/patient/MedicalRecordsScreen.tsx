@@ -93,7 +93,7 @@ export function MedicalRecordsScreen() {
 
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.85,
     });
     if (res.canceled) return;

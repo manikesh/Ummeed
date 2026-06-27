@@ -1,7 +1,7 @@
 {
   "name": "ummeed",
   "version": "1.0.0",
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -10,36 +10,34 @@
     "tsc-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~3.2.3",
     "@opentelemetry/api": "^1.9.0",
-    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.45.4",
-    "aes-js": "^3.1.2",
-    "expo": "~51.0.28",
-    "expo-constants": "~16.0.2",
-    "expo-document-picker": "~12.0.2",
-    "expo-image-picker": "~15.1.0",
-    "expo-linking": "~6.3.1",
-    "expo-secure-store": "~13.0.2",
-    "expo-status-bar": "~1.12.1",
-    "expo-system-ui": "~3.0.7",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-native": "0.74.5",
-    "react-native-gesture-handler": "~2.16.1",
+    "expo": "~54.0.0",
+    "expo-constants": "~18.0.13",
+    "expo-document-picker": "~14.0.8",
+    "expo-image-picker": "~17.0.11",
+    "expo-linking": "~8.0.12",
+    "expo-secure-store": "~15.0.8",
+    "expo-status-bar": "~3.0.9",
+    "expo-system-ui": "~6.0.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
     "react-native-get-random-values": "~1.11.0",
-    "react-native-reanimated": "~3.10.1",
-    "react-native-safe-area-context": "4.10.5",
-    "react-native-screens": "3.31.1",
-    "react-native-svg": "15.2.0",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.12.1",
     "react-native-url-polyfill": "^2.0.0",
-    "react-native-web": "~0.19.10"
+    "react-native-web": "~0.21.0",
+    "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
-    "@types/aes-js": "^3.1.4",
-    "@types/react": "~18.2.79",
-    "typescript": "~5.3.3"
+    "@babel/core": "^7.25.0",
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
   },
   "private": true
 }
