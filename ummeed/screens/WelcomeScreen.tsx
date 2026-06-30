@@ -26,7 +26,14 @@ export function WelcomeScreen() {
           onPress={() => push({ name: 'role-select' })}
           testID="welcome-get-started"
         />
-        <View style={{ height: spacing.md }} />
+        <View style={{ height: spacing.sm }} />
+        <Button
+          title="Already have an account? Sign In"
+          variant="secondary"
+          onPress={() => push({ name: 'login', isSignUp: false })}
+          testID="welcome-signin"
+        />
+        <View style={{ height: spacing.sm }} />
         <Button
           title="Browse without signing in"
           variant="ghost"

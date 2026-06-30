@@ -59,9 +59,9 @@ interface AuthState {
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
   /** Send the OTP to a phone number (bypassed in dev — accepts 123456). */
-  sendOtp: (phone: string, intendedRole: AppRole, fullName?: string) => Promise<void>;
+  sendOtp: (phone: string, intendedRole: AppRole | undefined, isSignUp: boolean, fullName?: string) => Promise<void>;
   /** Verify the OTP. token must be the 6-digit code. */
-  verifyOtp: (phone: string, token: string) => Promise<void>;
+  verifyOtp: (phone: string, token: string, isSignUp: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -129,12 +129,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // sendOtp: in bypass mode we don't send anything; just remember the
   // metadata so verifyOtp can sign the user up on the fly.
   const sendOtp = useCallback(
-    async (phone: string, intendedRole: AppRole, fullName?: string) => {
+    async (phone: string, intendedRole: AppRole | undefined, isSignUp: boolean, fullName?: string) => {
       if (!isValidPhone(phone)) {
         throw new Error('Please enter a valid 10-digit Indian mobile number.');
       }
       const p = normalizePhone(phone);
-      pendingSignup = { phone: p, role: intendedRole, fullName };
+      pendingSignup = { phone: p, role: intendedRole ?? 'patient', fullName };
 
       if (USE_OTP_BYPASS) {
         return; // no-op
@@ -143,8 +143,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signInWithOtp({
         phone: toE164(p),
         options: {
-          shouldCreateUser: true,
-          data: { role: intendedRole, full_name: fullName ?? '', phone: toE164(p) },
+          shouldCreateUser: isSignUp,
+          data: isSignUp
+            ? { role: intendedRole ?? 'patient', full_name: fullName ?? '', phone: toE164(p) }
+            : undefined,
         },
       });
       if (error) throw error;
@@ -153,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   // verifyOtp: in bypass mode any 123456 signs the user in (or up).
-  const verifyOtp = useCallback(async (phone: string, token: string) => {
+  const verifyOtp = useCallback(async (phone: string, token: string, isSignUp: boolean) => {
     if (!isValidPhone(phone)) {
       throw new Error('Please enter a valid 10-digit Indian mobile number.');
     }
@@ -171,7 +173,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: syntheticEmail,
         password,
       });
-      if (!signIn.error) return;
+
+      if (!signIn.error) {
+        // User exists. If trying to sign up, block it.
+        if (isSignUp) {
+          await supabase.auth.signOut();
+          throw new Error('An account with this mobile number already exists. Please sign in instead.');
+        }
+        return;
+      }
+
+      // If sign-in failed (user doesn't exist) and not signing up, block it.
+      if (!isSignUp) {
+        throw new Error('No account found for this mobile number. Please register first.');
+      }
 
       // 2) sign up (auto-confirm is on)
       const meta =

@@ -4,8 +4,8 @@ export type Nav =
   // public
   | { name: 'welcome' }
   | { name: 'role-select' }
-  | { name: 'login'; intendedRole: import('../lib/types').AppRole }
-  | { name: 'otp'; phone: string; intendedRole: import('../lib/types').AppRole }
+  | { name: 'login'; intendedRole?: import('../lib/types').AppRole; isSignUp?: boolean }
+  | { name: 'otp'; phone: string; intendedRole?: import('../lib/types').AppRole; isSignUp: boolean }
   | { name: 'pending-approval' }
   // patient
   | { name: 'patient-home' }

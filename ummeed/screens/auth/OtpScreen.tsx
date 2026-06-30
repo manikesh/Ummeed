@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { AppRole } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
 
-export function OtpScreen({ phone, intendedRole }: { phone: string; intendedRole: AppRole }) {
+export function OtpScreen({ phone, intendedRole, isSignUp }: { phone: string; intendedRole?: AppRole; isSignUp: boolean }) {
   const { verifyOtp, sendOtp } = useAuth();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,7 @@ export function OtpScreen({ phone, intendedRole }: { phone: string; intendedRole
     }
     setLoading(true);
     try {
-      await verifyOtp(phone, code);
+      await verifyOtp(phone, code, isSignUp);
       // RootNavigator switches screens after session is set.
     } catch (e: any) {
       setErr(e?.message ?? 'Invalid or expired code. Try again.');
@@ -40,7 +40,7 @@ export function OtpScreen({ phone, intendedRole }: { phone: string; intendedRole
     setInfo(null);
     setResending(true);
     try {
-      await sendOtp(phone, intendedRole);
+      await sendOtp(phone, intendedRole, isSignUp);
       setInfo('Dev mode: the code is 123456.');
     } catch (e: any) {
       setErr(e?.message ?? 'Could not resend code.');
