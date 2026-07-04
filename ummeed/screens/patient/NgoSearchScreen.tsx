@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import type { AppRole, Profile } from '../../lib/types';
@@ -22,6 +23,7 @@ export function NgoSearchScreen() {
   const [query, setQuery] = useState('');
   const [list, setList] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const search = useCallback(async () => {
     setLoading(true);
@@ -49,6 +51,7 @@ export function NgoSearchScreen() {
   }, [search]);
 
   const connect = async (target: Profile) => {
+    setSuccess(null);
     if (!profile) return;
     if (profile.role !== 'patient') {
       Alert.alert('Only patients', 'Only patients can send connection requests.');
@@ -67,11 +70,12 @@ export function NgoSearchScreen() {
       }
       return;
     }
-    Alert.alert('Request sent', 'The provider will respond shortly.');
+    setSuccess('Connection request sent successfully. The provider will respond shortly.');
   };
 
   return (
     <Screen title="Find support" subtitle="NGOs, counselors, legal aid and doctors.">
+      <SuccessMessage message={success} />
       <View style={styles.tabs}>
         {ROLE_TABS.map((t) => (
           <Button

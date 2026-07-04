@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import type { ContentItem } from '../../lib/types';
@@ -21,6 +22,7 @@ export function AdminContentScreen() {
   const [phone, setPhone] = useState('');
   const [url, setUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,6 +41,7 @@ export function AdminContentScreen() {
 
   const add = async () => {
     if (!profile) return;
+    setSuccess(null);
     if (!title.trim()) {
       Alert.alert('Missing title');
       return;
@@ -62,16 +65,18 @@ export function AdminContentScreen() {
     setBody('');
     setPhone('');
     setUrl('');
-    Alert.alert('Saved successfully', 'The content data was saved successfully.');
+    setSuccess('The content data was saved successfully.');
     load();
   };
 
   const togglePublish = async (c: ContentItem) => {
+    setSuccess(null);
     const { error } = await supabase.from('content_items').update({ is_published: !c.is_published }).eq('id', c.id);
     if (error) {
       Alert.alert('Update error', error.message);
       return;
     }
+    setSuccess(`Content ${c.is_published ? 'unpublished' : 'published'} successfully.`);
     load();
   };
 
@@ -112,6 +117,7 @@ export function AdminContentScreen() {
       />
       <Input label="Phone (for helplines)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" testID="cnt-phone" />
       <Input label="URL (for news / videos / schemes)" value={url} onChangeText={setUrl} autoCapitalize="none" testID="cnt-url" />
+      <SuccessMessage message={success} />
       <Button title="Add content" onPress={add} loading={saving} variant="secondary" testID="cnt-add" />
 
       <View style={{ height: spacing.lg }} />

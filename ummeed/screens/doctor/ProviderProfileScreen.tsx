@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { CityStateAutocomplete } from '../../components/CityStateAutocomplete';
 import { Screen } from '../../components/Screen';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors, font, spacing } from '../../theme';
@@ -33,9 +34,11 @@ export function ProviderProfileScreen({ variant }: Props) {
   const [state, setState] = useState(profile?.state ?? '');
   const [address, setAddress] = useState(profile?.address ?? '');
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
+    setSuccess(null);
     setFullName(profile.full_name ?? '');
     setPhone(profile.phone ?? '');
     setOrg(profile.organization_name ?? '');
@@ -67,7 +70,7 @@ export function ProviderProfileScreen({ variant }: Props) {
       return;
     }
     await refreshProfile();
-    Alert.alert('Saved successfully', 'Your profile data was saved successfully. Admin will re-review it if needed.');
+    setSuccess('Your profile data was saved successfully. Admin will re-review it if needed.');
   };
 
   return (
@@ -94,6 +97,7 @@ export function ProviderProfileScreen({ variant }: Props) {
         cityTestID="pp-city"
         stateTestID="pp-state"
       />
+      <SuccessMessage message={success} />
       <Button title="Save profile" onPress={save} loading={saving} testID="pp-save" />
 
       <Text style={styles.note}>

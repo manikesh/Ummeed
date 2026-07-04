@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { CityStateAutocomplete } from '../../components/CityStateAutocomplete';
 import { Screen } from '../../components/Screen';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors, font, spacing } from '../../theme';
@@ -20,6 +21,7 @@ export function PatientProfileScreen() {
   const [ecPhone, setEcPhone] = useState(profile?.emergency_contact_phone ?? '');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -36,6 +38,7 @@ export function PatientProfileScreen() {
   const save = async () => {
     if (!profile) return;
     setErr(null);
+    setSuccess(null);
     setSaving(true);
     const ageNum = age.trim() ? Number(age) : null;
     const { error } = await supabase
@@ -57,7 +60,7 @@ export function PatientProfileScreen() {
       return;
     }
     await refreshProfile();
-    Alert.alert('Saved successfully', 'Your profile data was saved successfully.');
+    setSuccess('Your profile data was saved successfully.');
   };
 
   return (
@@ -89,6 +92,7 @@ export function PatientProfileScreen() {
       <Input label="Contact phone" value={ecPhone} onChangeText={setEcPhone} keyboardType="phone-pad" testID="pp-ec-phone" />
 
       {err ? <Text style={styles.err}>{err}</Text> : null}
+      <SuccessMessage message={success} />
       <View style={{ height: spacing.sm }} />
       <Button title="Save profile" onPress={save} loading={saving} testID="pp-save" />
     </Screen>

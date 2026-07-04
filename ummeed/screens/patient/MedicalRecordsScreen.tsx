@@ -6,6 +6,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import type { MedicalRecord } from '../../lib/types';
@@ -18,6 +19,7 @@ export function MedicalRecordsScreen() {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -41,6 +43,7 @@ export function MedicalRecordsScreen() {
 
   const addTextOnly = async () => {
     if (!profile) return;
+    setSuccess(null);
     if (!title.trim()) {
       Alert.alert('Missing title', 'Please give the record a title.');
       return;
@@ -59,12 +62,13 @@ export function MedicalRecordsScreen() {
     }
     setTitle('');
     setNotes('');
-    Alert.alert('Saved successfully', 'Your medical record data was saved successfully.');
+    setSuccess('Your medical record was saved successfully.');
     load();
   };
 
   const uploadAsset = async (uri: string, name: string, mime: string) => {
     if (!profile) return;
+    setSuccess(null);
     const path = `${profile.id}/${Date.now()}-${name}`;
     const resp = await fetch(uri);
     const blob = await resp.blob();
@@ -89,7 +93,7 @@ export function MedicalRecordsScreen() {
     }
     setTitle('');
     setNotes('');
-    Alert.alert('Saved successfully', 'Your medical record data was saved successfully.');
+    setSuccess('Your medical record was saved successfully.');
     load();
   };
 
@@ -139,6 +143,7 @@ export function MedicalRecordsScreen() {
         style={{ minHeight: 80, textAlignVertical: 'top' }}
         testID="mr-notes"
       />
+      <SuccessMessage message={success} />
       <View style={styles.row}>
         <View style={{ flex: 1, marginRight: spacing.sm }}>
           <Button title="Add note only" onPress={addTextOnly} loading={busy} variant="ghost" testID="mr-add-note" />

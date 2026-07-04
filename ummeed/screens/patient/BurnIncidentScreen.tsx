@@ -3,6 +3,9 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
+import { CityStateAutocomplete } from '../../components/CityStateAutocomplete';
+import { DateInput } from '../../components/DateInput';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -22,7 +25,10 @@ export function BurnIncidentScreen() {
   const [bodyPart, setBodyPart] = useState('');
   const [incidentDate, setIncidentDate] = useState('');
   const [location, setLocation] = useState('');
+  const [locationState, setLocationState] = useState('');
   const [description, setDescription] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -46,8 +52,9 @@ export function BurnIncidentScreen() {
 
   const save = async () => {
     if (!profile) return;
+    setSuccess(null);
     setSaving(true);
-    const { error } = await supabase.from('burn_incidents').insert({
+    const values = {
       patient_id: profile.id,
       burn_type: burnType,
       severity,
@@ -55,7 +62,11 @@ export function BurnIncidentScreen() {
       location: location || null,
       description: description || null,
       incident_date: incidentDate || null,
-    });
+    };
+    const query = editingId
+      ? supabase.from('burn_incidents').update(values).eq('id', editingId)
+      : supabase.from('burn_incidents').insert(values);
+    const { error } = await query;
     setSaving(false);
     if (error) {
       Alert.alert('Save error', error.message);
@@ -63,10 +74,33 @@ export function BurnIncidentScreen() {
     }
     setBodyPart('');
     setLocation('');
+    setLocationState('');
     setDescription('');
     setIncidentDate('');
-    Alert.alert('Saved successfully', 'Your burn incident data was saved successfully.');
+    setEditingId(null);
+    setSuccess(editingId ? 'Burn incident updated successfully.' : 'Burn incident saved successfully.');
     load();
+  };
+
+  const edit = (incident: BurnIncident) => {
+    setEditingId(incident.id);
+    setBurnType(incident.burn_type ?? 'acid');
+    setSeverity(incident.severity ?? '2nd_degree');
+    setBodyPart(incident.body_part ?? '');
+    setIncidentDate(incident.incident_date ?? '');
+    setLocation(incident.location ?? '');
+    setLocationState('');
+    setDescription(incident.description ?? '');
+    setSuccess(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setBodyPart('');
+    setIncidentDate('');
+    setLocation('');
+    setLocationState('');
+    setDescription('');
   };
 
   const del = async (id: string) => {
@@ -101,8 +135,15 @@ export function BurnIncidentScreen() {
       </View>
 
       <Input label="Body part affected" value={bodyPart} onChangeText={setBodyPart} placeholder="e.g. face, left arm" testID="bi-part" />
-      <Input label="Date of incident" value={incidentDate} onChangeText={setIncidentDate} placeholder="YYYY-MM-DD" testID="bi-date" />
-      <Input label="Where did it happen" value={location} onChangeText={setLocation} placeholder="City / place" testID="bi-location" />
+      <DateInput label="Date of incident" value={incidentDate} onChange={setIncidentDate} maximumDate={new Date()} testID="bi-date" />
+      <CityStateAutocomplete
+        city={location}
+        setCity={setLocation}
+        state={locationState}
+        setState={setLocationState}
+        showState={false}
+        cityTestID="bi-location"
+      />
       <Input
         label="Description (optional)"
         value={description}
@@ -113,7 +154,13 @@ export function BurnIncidentScreen() {
         style={{ minHeight: 100, textAlignVertical: 'top' }}
         testID="bi-desc"
       />
-      <Button title="Add incident" onPress={save} loading={saving} testID="bi-save" />
+      <SuccessMessage message={success} />
+      <Button title={editingId ? 'Save changes' : 'Add incident'} onPress={save} loading={saving} testID="bi-save" />
+      {editingId ? (
+        <View style={{ marginTop: spacing.sm }}>
+          <Button title="Cancel editing" variant="ghost" onPress={cancelEdit} testID="bi-cancel-edit" />
+        </View>
+      ) : null}
 
       <View style={{ height: spacing.lg }} />
       <Text style={styles.section}>My incidents {loading ? '…' : `(${list.length})`}</Text>
@@ -129,7 +176,14 @@ export function BurnIncidentScreen() {
         >
           {it.description ? <Text style={styles.cardBody}>{it.description}</Text> : null}
           <View style={{ height: spacing.sm }} />
-          <Button title="Delete" variant="danger" onPress={() => del(it.id)} fullWidth={false} testID={`bi-del-${it.id}`} />
+          <View style={styles.actions}>
+            <View style={{ flex: 1, marginRight: spacing.sm }}>
+              <Button title="Review / Edit" variant="ghost" onPress={() => edit(it)} testID={`bi-edit-${it.id}`} />
+            </View>
+            <View style={{ flex: 1, marginLeft: spacing.sm }}>
+              <Button title="Delete" variant="danger" onPress={() => del(it.id)} testID={`bi-del-${it.id}`} />
+            </View>
+          </View>
         </Card>
       ))}
     </Screen>
@@ -162,6 +216,7 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
+  actions: { flexDirection: 'row' },
   section: { color: colors.primary, fontSize: font.h3, fontWeight: font.weightBold, marginTop: spacing.md, marginBottom: spacing.sm },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap' },
   cardBody: { color: colors.text, fontSize: font.body, marginBottom: spacing.sm },

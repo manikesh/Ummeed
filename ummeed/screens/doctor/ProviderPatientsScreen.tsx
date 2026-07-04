@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Screen } from '../../components/Screen';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import type { Connection, Profile } from '../../lib/types';
@@ -17,6 +18,7 @@ export function ProviderPatientsScreen() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'pending' | 'accepted' | 'declined'>('pending');
+  const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -40,11 +42,13 @@ export function ProviderPatientsScreen() {
   }, [load]);
 
   const decide = async (row: Row, status: 'accepted' | 'declined') => {
+    setSuccess(null);
     const { error } = await supabase.from('connections').update({ status }).eq('id', row.id);
     if (error) {
       Alert.alert('Update error', error.message);
       return;
     }
+    setSuccess(`Patient request ${status} successfully.`);
     load();
   };
 
@@ -67,6 +71,7 @@ export function ProviderPatientsScreen() {
       <Text style={styles.section}>
         {loading ? 'Loading…' : `${rows.length} ${filter} request${rows.length === 1 ? '' : 's'}`}
       </Text>
+      <SuccessMessage message={success} />
 
       {rows.map((r) => (
         <Card

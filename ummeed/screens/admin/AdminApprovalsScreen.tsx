@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Screen } from '../../components/Screen';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { supabase } from '../../lib/supabase';
 import type { Profile } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
@@ -11,6 +12,7 @@ export function AdminApprovalsScreen() {
   const [list, setList] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -33,11 +35,13 @@ export function AdminApprovalsScreen() {
   }, [load]);
 
   const decide = async (p: Profile, status: 'approved' | 'rejected') => {
+    setSuccess(null);
     const { error } = await supabase.from('profiles').update({ verification_status: status }).eq('id', p.id);
     if (error) {
       Alert.alert('Update error', error.message);
       return;
     }
+    setSuccess(`User ${status} successfully.`);
     load();
   };
 
@@ -69,6 +73,7 @@ export function AdminApprovalsScreen() {
       <Text style={styles.section}>
         {loading ? 'Loading…' : `${list.length} ${filter}`}
       </Text>
+      <SuccessMessage message={success} />
 
       {list.map((p) => (
         <Card

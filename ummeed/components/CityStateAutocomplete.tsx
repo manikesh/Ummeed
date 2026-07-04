@@ -11,6 +11,7 @@ interface Props {
   setState: (state: string) => void;
   cityTestID?: string;
   stateTestID?: string;
+  showState?: boolean;
 }
 
 export function CityStateAutocomplete({
@@ -20,6 +21,7 @@ export function CityStateAutocomplete({
   setState,
   cityTestID,
   stateTestID,
+  showState = true,
 }: Props) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<CityState[]>([]);
@@ -91,7 +93,7 @@ export function CityStateAutocomplete({
         </View>
 
         {/* State Input */}
-        <View style={styles.columnRight}>
+        {showState ? <View style={styles.columnRight}>
           <Input
             label="State"
             value={state}
@@ -100,7 +102,7 @@ export function CityStateAutocomplete({
             hint="State is selected automatically based on the city."
             testID={stateTestID}
           />
-        </View>
+        </View> : null}
       </View>
     </View>
   );

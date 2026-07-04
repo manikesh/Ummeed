@@ -3,7 +3,9 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
+import { CityStateAutocomplete } from '../../components/CityStateAutocomplete';
 import { Screen } from '../../components/Screen';
+import { SuccessMessage } from '../../components/SuccessMessage';
 import { supabase } from '../../lib/supabase';
 import type { Hospital } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
@@ -18,6 +20,7 @@ export function AdminHospitalsScreen() {
   const [address, setAddress] = useState('');
   const [burn, setBurn] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,6 +38,7 @@ export function AdminHospitalsScreen() {
   }, [load]);
 
   const add = async () => {
+    setSuccess(null);
     if (!name.trim()) {
       Alert.alert('Missing name', 'Hospital name is required.');
       return;
@@ -59,16 +63,18 @@ export function AdminHospitalsScreen() {
     setState('');
     setPhone('');
     setAddress('');
-    Alert.alert('Saved successfully', 'The hospital data was saved successfully.');
+    setSuccess('The hospital data was saved successfully.');
     load();
   };
 
   const toggleActive = async (h: Hospital) => {
+    setSuccess(null);
     const { error } = await supabase.from('hospitals').update({ is_active: !h.is_active }).eq('id', h.id);
     if (error) {
       Alert.alert('Update error', error.message);
       return;
     }
+    setSuccess(`Hospital ${h.is_active ? 'deactivated' : 'activated'} successfully.`);
     load();
   };
 
@@ -86,14 +92,7 @@ export function AdminHospitalsScreen() {
       <Text style={styles.section}>Add new</Text>
       <Input label="Name" value={name} onChangeText={setName} testID="hosp-name" />
       <Input label="Address" value={address} onChangeText={setAddress} testID="hosp-addr" />
-      <View style={styles.row}>
-        <View style={{ flex: 1, marginRight: spacing.sm }}>
-          <Input label="City" value={city} onChangeText={setCity} testID="hosp-city" />
-        </View>
-        <View style={{ flex: 1, marginLeft: spacing.sm }}>
-          <Input label="State" value={state} onChangeText={setState} testID="hosp-state" />
-        </View>
-      </View>
+      <CityStateAutocomplete city={city} setCity={setCity} state={state} setState={setState} cityTestID="hosp-city" stateTestID="hosp-state" />
       <Input label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" testID="hosp-phone" />
       <Button
         title={burn ? '✓ Has burn unit' : 'Has burn unit'}
@@ -102,6 +101,7 @@ export function AdminHospitalsScreen() {
         testID="hosp-burn-toggle"
       />
       <View style={{ height: spacing.sm }} />
+      <SuccessMessage message={success} />
       <Button title="Add hospital" onPress={add} loading={saving} variant="secondary" testID="hosp-add" />
 
       <View style={{ height: spacing.lg }} />
