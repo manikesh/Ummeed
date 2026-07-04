@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { CityStateAutocomplete } from '../../components/CityStateAutocomplete';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -85,8 +86,14 @@ export function ProviderProfileScreen({ variant }: Props) {
         />
       ) : null}
       <Input label="Address" value={address} onChangeText={setAddress} testID="pp-address" />
-      <Input label="City" value={city} onChangeText={setCity} testID="pp-city" />
-      <Input label="State" value={state} onChangeText={setState} testID="pp-state" />
+      <CityStateAutocomplete
+        city={city}
+        setCity={setCity}
+        state={state}
+        setState={setState}
+        cityTestID="pp-city"
+        stateTestID="pp-state"
+      />
       <Button title="Save profile" onPress={save} loading={saving} testID="pp-save" />
 
       <Text style={styles.note}>

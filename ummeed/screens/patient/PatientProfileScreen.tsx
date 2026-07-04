@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { CityStateAutocomplete } from '../../components/CityStateAutocomplete';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -74,14 +75,14 @@ export function PatientProfileScreen() {
       </View>
 
       <Text style={styles.section}>Address</Text>
-      <View style={styles.row}>
-        <View style={{ flex: 1, marginRight: spacing.sm }}>
-          <Input label="City" value={city} onChangeText={setCity} testID="pp-city" />
-        </View>
-        <View style={{ flex: 1, marginLeft: spacing.sm }}>
-          <Input label="State" value={state} onChangeText={setState} testID="pp-state" />
-        </View>
-      </View>
+      <CityStateAutocomplete
+        city={city}
+        setCity={setCity}
+        state={state}
+        setState={setState}
+        cityTestID="pp-city"
+        stateTestID="pp-state"
+      />
 
       <Text style={styles.section}>Emergency contact</Text>
       <Input label="Contact name" value={ecName} onChangeText={setEcName} testID="pp-ec-name" />

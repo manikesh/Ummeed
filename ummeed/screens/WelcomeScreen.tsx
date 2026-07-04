@@ -37,7 +37,7 @@ export function WelcomeScreen() {
         <Button
           title="Browse without signing in"
           variant="ghost"
-          onPress={() => reset({ name: 'emergency' })}
+          onPress={() => push({ name: 'emergency' })}
           testID="welcome-browse"
         />
       </View>
