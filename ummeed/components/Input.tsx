@@ -20,6 +20,7 @@ export function Input({ label, error, hint, style, testID, ...rest }: Props) {
         placeholderTextColor={colors.textMuted}
         style={[
           styles.input,
+          rest.editable === false ? styles.inputReadOnly : null,
           error ? styles.inputError : null,
           style as any,
         ]}
@@ -50,6 +51,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   inputError: { borderColor: colors.danger },
+  inputReadOnly: { backgroundColor: colors.surfaceAlt, color: colors.textMuted },
   hint: { color: colors.textMuted, fontSize: font.small, marginTop: spacing.xs },
   error: { color: colors.danger, fontSize: font.small, marginTop: spacing.xs, fontWeight: font.weightSemi },
 });

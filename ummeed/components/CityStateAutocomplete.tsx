@@ -26,6 +26,10 @@ export function CityStateAutocomplete({
 
   const handleCityChange = (text: string) => {
     setCity(text);
+    const exactMatch = CITIES_AND_STATES.find(
+      (item) => item.city.toLowerCase() === text.trim().toLowerCase()
+    );
+    setState(exactMatch?.state ?? '');
     if (!text.trim()) {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -91,8 +95,9 @@ export function CityStateAutocomplete({
           <Input
             label="State"
             value={state}
-            onChangeText={setState}
-            placeholder="State"
+            editable={false}
+            placeholder="Auto-filled from city"
+            hint="State is selected automatically based on the city."
             testID={stateTestID}
           />
         </View>

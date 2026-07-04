@@ -59,6 +59,7 @@ export function AdminHospitalsScreen() {
     setState('');
     setPhone('');
     setAddress('');
+    Alert.alert('Saved successfully', 'The hospital data was saved successfully.');
     load();
   };
 

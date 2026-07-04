@@ -59,6 +59,7 @@ export function MedicalRecordsScreen() {
     }
     setTitle('');
     setNotes('');
+    Alert.alert('Saved successfully', 'Your medical record data was saved successfully.');
     load();
   };
 
@@ -88,6 +89,7 @@ export function MedicalRecordsScreen() {
     }
     setTitle('');
     setNotes('');
+    Alert.alert('Saved successfully', 'Your medical record data was saved successfully.');
     load();
   };
 

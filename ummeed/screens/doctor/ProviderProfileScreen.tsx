@@ -67,7 +67,7 @@ export function ProviderProfileScreen({ variant }: Props) {
       return;
     }
     await refreshProfile();
-    Alert.alert('Saved', 'Profile updated. Admin will re-review if needed.');
+    Alert.alert('Saved successfully', 'Your profile data was saved successfully. Admin will re-review it if needed.');
   };
 
   return (

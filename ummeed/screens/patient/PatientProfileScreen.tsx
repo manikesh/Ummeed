@@ -57,7 +57,7 @@ export function PatientProfileScreen() {
       return;
     }
     await refreshProfile();
-    Alert.alert('Saved', 'Your profile has been updated.');
+    Alert.alert('Saved successfully', 'Your profile data was saved successfully.');
   };
 
   return (

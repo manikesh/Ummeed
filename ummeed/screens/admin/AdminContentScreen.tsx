@@ -62,6 +62,7 @@ export function AdminContentScreen() {
     setBody('');
     setPhone('');
     setUrl('');
+    Alert.alert('Saved successfully', 'The content data was saved successfully.');
     load();
   };
 

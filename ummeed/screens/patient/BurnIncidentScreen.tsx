@@ -65,6 +65,7 @@ export function BurnIncidentScreen() {
     setLocation('');
     setDescription('');
     setIncidentDate('');
+    Alert.alert('Saved successfully', 'Your burn incident data was saved successfully.');
     load();
   };
 
