@@ -3,17 +3,19 @@ import { ContentManager } from '../../components/ContentManager';
 import { Screen } from '../../components/Screen';
 import type { ContentItem } from '../../lib/types';
 
-const DOCTOR_CATEGORIES: ContentItem['category'][] = [
+const INFORMATION_CATEGORIES: ContentItem['category'][] = [
   'first_aid',
   'remedy',
   'news',
+  'scheme',
+  'helpline',
   'video',
 ];
 
 export function DoctorContentScreen() {
   return (
-    <Screen title="Manage Content" subtitle="Publish medical first-aid, remedies, news and videos.">
-      <ContentManager allowedCategories={DOCTOR_CATEGORIES} canModerateAll={false} />
+    <Screen title="Manage content" subtitle="Add informational content for survivors and care teams.">
+      <ContentManager allowedCategories={INFORMATION_CATEGORIES} canModerateAll={false} />
     </Screen>
   );
 }

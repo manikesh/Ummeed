@@ -17,6 +17,7 @@ export function NgoHomeScreen() {
     >
       <Card title="My profile" subtitle="Organisation info & verification." onPress={() => push({ name: 'ngo-profile' })} testID="nh-profile" />
       <Card title="Patient requests" subtitle="Accept connection requests from patients." onPress={() => push({ name: 'ngo-patients' })} testID="nh-patients" />
+      <Card title="Share informational content" subtitle="Add content for review and publication." onPress={() => push({ name: 'ngo-content' })} testID="nh-content" />
       <Card title="Emergency content" subtitle="First-aid, helplines and schemes." onPress={() => push({ name: 'emergency' })} testID="nh-emergency" />
     </Screen>
   );

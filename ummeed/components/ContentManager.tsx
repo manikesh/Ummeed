@@ -31,6 +31,8 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
   const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; body?: string }>({});
   const [hasSubmitError, setHasSubmitError] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingPublished, setEditingPublished] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,7 +56,18 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
     load();
   }, [load]);
 
-  const add = async () => {
+  const resetForm = () => {
+    setTitle('');
+    setBody('');
+    setPhone('');
+    setUrl('');
+    setEditingId(null);
+    setEditingPublished(false);
+    setErrors({});
+    setHasSubmitError(false);
+  };
+
+  const save = async () => {
     if (!profile) return;
     setSuccess(null);
     setErrors({});
@@ -83,30 +96,47 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
     }
 
     setSaving(true);
-    const { error } = await supabase.from('content_items').insert({
+    const values = {
       category,
       title: cleanTitle,
       body: cleanBody || null,
       phone: phone || null,
       url: url || null,
-      is_published: canModerateAll, // Non-admins require admin approval
-      created_by: profile.id,
-    });
+      is_published: canModerateAll ? editingPublished : false,
+    };
+    const query = editingId
+      ? supabase.from('content_items').update(values).eq('id', editingId)
+      : supabase.from('content_items').insert({
+          ...values,
+          is_published: canModerateAll,
+          created_by: profile.id,
+        });
+    const { error } = await query;
     setSaving(false);
     if (error) {
       Alert.alert('Save error', error.message);
       return;
     }
-    setTitle('');
-    setBody('');
-    setPhone('');
-    setUrl('');
+    resetForm();
     setSuccess(
       canModerateAll
         ? 'The content data was saved successfully.'
         : NON_ADMIN_UPLOAD_SUCCESS
     );
     load();
+  };
+
+  const edit = (c: ContentItem) => {
+    setEditingId(c.id);
+    setEditingPublished(c.is_published);
+    setCategory(c.category);
+    setTitle(c.title);
+    setBody(c.body ?? '');
+    setPhone(c.phone ?? '');
+    setUrl(c.url ?? '');
+    setSuccess(null);
+    setErrors({});
+    setHasSubmitError(false);
   };
 
   const togglePublish = async (c: ContentItem) => {
@@ -204,12 +234,17 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
 
       <SuccessMessage message={success} />
       <Button
-        title="Add content"
-        onPress={add}
+        title={editingId ? 'Save changes' : 'Add content'}
+        onPress={save}
         loading={saving || isUploading}
         variant="secondary"
         testID="cnt-add"
       />
+      {editingId ? (
+        <View style={{ marginTop: spacing.sm }}>
+          <Button title="Cancel editing" variant="ghost" onPress={resetForm} testID="cnt-cancel-edit" />
+        </View>
+      ) : null}
 
       <View style={{ height: spacing.lg }} />
       <Text style={styles.section}>{loading ? 'Loading…' : `Content list (${list.length})`}</Text>
@@ -219,7 +254,7 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
       
       {list.map((c) => {
         const isOwner = Boolean(profile && c.created_by === profile.id);
-        const canDelete = canModerateAll || isOwner;
+        const canManage = canModerateAll || isOwner;
         
         return (
           <Card
@@ -232,8 +267,16 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
             {c.phone ? <Text style={styles.body}>📞 {c.phone}</Text> : null}
             {c.url ? <Text style={styles.body}>🔗 {c.url}</Text> : null}
             
-            {canDelete && (
+            {canManage && (
               <View style={styles.row}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <Button
+                    title="Edit"
+                    variant="ghost"
+                    onPress={() => edit(c)}
+                    testID={`cnt-edit-${c.id}`}
+                  />
+                </View>
                 {canModerateAll ? (
                   <View style={{ flex: 1, marginRight: spacing.sm }}>
                     <Button
@@ -244,16 +287,14 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
                     />
                   </View>
                 ) : null}
-                {canDelete ? (
-                  <View style={{ flex: 1, marginLeft: canModerateAll ? spacing.sm : 0 }}>
-                    <Button
-                      title="Delete"
-                      variant="danger"
-                      onPress={() => remove(c)}
-                      testID={`cnt-del-${c.id}`}
-                    />
-                  </View>
-                ) : null}
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Delete"
+                    variant="danger"
+                    onPress={() => remove(c)}
+                    testID={`cnt-del-${c.id}`}
+                  />
+                </View>
               </View>
             )}
           </Card>

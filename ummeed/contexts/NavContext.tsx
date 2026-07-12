@@ -25,6 +25,7 @@ export type Nav =
   | { name: 'ngo-home' }
   | { name: 'ngo-profile' }
   | { name: 'ngo-patients' }
+  | { name: 'ngo-content' }
   // admin
   | { name: 'admin-home' }
   | { name: 'admin-approvals' }

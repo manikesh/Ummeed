@@ -139,7 +139,7 @@ create table if not exists public.content_items (
   body text,
   url text,                          -- for videos / news / scheme links
   phone text,                        -- for helplines
-  is_published boolean default true,
+  is_published boolean default false,
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -285,14 +285,13 @@ create policy hospitals_write_admin on public.hospitals for all to authenticated
 -- ----- CONTENT ITEMS policies -----
 drop policy if exists content_select_all on public.content_items;
 create policy content_select_all on public.content_items for select
-  using (is_published = true or public.is_admin());
+  using (is_published = true or created_by = auth.uid() or public.is_admin());
 
 drop policy if exists content_write_policy on public.content_items;
-create policy content_write_policy on public.content_items for all to authenticated
-  using (created_by = auth.uid() or public.is_admin())
-  with check (created_by = auth.uid() or public.is_admin());
-
 drop policy if exists content_insert_provider on public.content_items;
+drop policy if exists content_update_owner_admin on public.content_items;
+drop policy if exists content_delete_owner_admin on public.content_items;
+
 create policy content_insert_provider on public.content_items for insert to authenticated
   with check (
     created_by = auth.uid()
@@ -302,7 +301,27 @@ create policy content_insert_provider on public.content_items for insert to auth
         and p.role in ('doctor', 'ngo', 'counselor', 'legal_aid', 'admin')
         and p.verification_status = 'approved'
     )
+    and (public.is_admin() or is_published = false)
   );
+
+create policy content_update_owner_admin on public.content_items for update to authenticated
+  using (created_by = auth.uid() or public.is_admin())
+  with check (
+    public.is_admin()
+    or (
+      created_by = auth.uid()
+      and is_published = false
+      and exists (
+        select 1 from public.profiles p
+        where p.id = auth.uid()
+          and p.role in ('doctor', 'ngo', 'counselor', 'legal_aid', 'admin')
+          and p.verification_status = 'approved'
+      )
+    )
+  );
+
+create policy content_delete_owner_admin on public.content_items for delete to authenticated
+  using (created_by = auth.uid() or public.is_admin());
 
 -- ----- BURN INCIDENTS policies -----
 drop policy if exists incidents_select_self_admin on public.burn_incidents;

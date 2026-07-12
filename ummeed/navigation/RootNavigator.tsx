@@ -80,6 +80,8 @@ function renderScreen(current: Nav) {
       return <ProviderProfileScreen variant="ngo" />;
     case 'ngo-patients':
       return <ProviderPatientsScreen />;
+    case 'ngo-content':
+      return <DoctorContentScreen />;
     case 'admin-home':
       return <AdminHomeScreen />;
     case 'admin-approvals':
