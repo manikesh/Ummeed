@@ -287,9 +287,22 @@ drop policy if exists content_select_all on public.content_items;
 create policy content_select_all on public.content_items for select
   using (is_published = true or public.is_admin());
 
-drop policy if exists content_write_admin on public.content_items;
-create policy content_write_admin on public.content_items for all to authenticated
-  using (public.is_admin()) with check (public.is_admin());
+drop policy if exists content_write_policy on public.content_items;
+create policy content_write_policy on public.content_items for all to authenticated
+  using (created_by = auth.uid() or public.is_admin())
+  with check (created_by = auth.uid() or public.is_admin());
+
+drop policy if exists content_insert_provider on public.content_items;
+create policy content_insert_provider on public.content_items for insert to authenticated
+  with check (
+    created_by = auth.uid()
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role in ('doctor', 'ngo', 'counselor', 'legal_aid', 'admin')
+        and p.verification_status = 'approved'
+    )
+  );
 
 -- ----- BURN INCIDENTS policies -----
 drop policy if exists incidents_select_self_admin on public.burn_incidents;
@@ -450,6 +463,34 @@ create policy mr_delete on storage.objects for delete to authenticated
   using (
     bucket_id = 'medical_records'
     and (split_part(name,'/',1)::uuid = auth.uid() or public.is_admin())
+  );
+
+-- Content media: public bucket for uploading helpful social information media
+insert into storage.buckets (id, name, public)
+values ('content_media', 'content_media', true)
+on conflict (id) do nothing;
+
+drop policy if exists content_media_select on storage.objects;
+create policy content_media_select on storage.objects for select
+  using (bucket_id = 'content_media');
+
+drop policy if exists content_media_insert on storage.objects;
+create policy content_media_insert on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'content_media'
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role in ('doctor', 'ngo', 'counselor', 'legal_aid', 'admin')
+        and p.verification_status = 'approved'
+    )
+  );
+
+drop policy if exists content_media_delete on storage.objects;
+create policy content_media_delete on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'content_media'
+    and (owner = auth.uid() or public.is_admin())
   );
 
 -- ---------------------------------------------------------------------

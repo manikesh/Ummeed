@@ -17,7 +17,8 @@ export function DoctorHomeScreen() {
       rightAction={{ label: 'Sign out', onPress: signOut }}
     >
       <Card title="My profile" subtitle="Specialization, hospital, license." onPress={() => push({ name: 'doctor-profile' })} testID="dh-profile" />
-      <Card title="My patient requests" subtitle="Accept / decline connection requests." onPress={() => push({ name: 'doctor-patients' })} testID="dh-patients" />
+      {/*<Card title="My patient requests" subtitle="Accept / decline connection requests." onPress={() => push({ name: 'doctor-patients' })} testID="dh-patients" />*/}
+      <Card title="Share educational content" subtitle="Publish first-aid guides, home remedies and video links." onPress={() => push({ name: 'doctor-content' })} testID="dh-content" />
       <Card title="Emergency content" subtitle="First-aid, helplines and schemes." onPress={() => push({ name: 'emergency' })} testID="dh-emergency" />
       <Text style={styles.note}>
         Tip: complete your profile so patients can find and trust you.

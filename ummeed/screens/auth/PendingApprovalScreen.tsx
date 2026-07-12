@@ -3,10 +3,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNav } from '../../contexts/NavContext';
 import { colors, font, spacing } from '../../theme';
 
 export function PendingApprovalScreen() {
   const { profile, signOut } = useAuth();
+  const { push } = useNav();
   return (
     <Screen title="Awaiting approval" hideBack>
       <View style={styles.box}>
@@ -15,13 +17,19 @@ export function PendingApprovalScreen() {
           Thanks for signing up, {profile?.full_name ?? 'friend'}.
         </Text>
         <Text style={styles.body}>
-          Your {profile?.role.replace('_', ' ')} account is being reviewed by the Ummeed admin team. You will be able to access patient features as soon as your profile is approved.
+          Your {profile?.role.replace('_', ' ')} profile has been submitted to the Ummeed admin team. You will be able to access your dashboard after approval.
         </Text>
         <Text style={[styles.body, { marginTop: spacing.md }]}>
           You can still browse first-aid info, helplines and government schemes in the meantime.
         </Text>
       </View>
       <View style={{ height: spacing.lg }} />
+      <Button
+        title="Review submitted profile"
+        onPress={() => push({ name: profile?.role === 'doctor' ? 'doctor-profile' : 'ngo-profile' })}
+        testID="pending-review-profile"
+      />
+      <View style={{ height: spacing.sm }} />
       <Button title="Sign out" variant="ghost" onPress={signOut} testID="pending-signout" />
     </Screen>
   );

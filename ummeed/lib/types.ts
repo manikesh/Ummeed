@@ -86,5 +86,6 @@ export interface ContentItem {
   url: string | null;
   phone: string | null;
   is_published: boolean;
+  created_by: string | null;
   created_at: string;
 }

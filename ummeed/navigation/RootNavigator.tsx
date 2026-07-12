@@ -22,6 +22,7 @@ import { PatientProfileScreen } from '../screens/patient/PatientProfileScreen';
 import { DoctorHomeScreen } from '../screens/doctor/DoctorHomeScreen';
 import { ProviderPatientsScreen } from '../screens/doctor/ProviderPatientsScreen';
 import { ProviderProfileScreen } from '../screens/doctor/ProviderProfileScreen';
+import { DoctorContentScreen } from '../screens/doctor/DoctorContentScreen';
 
 import { NgoHomeScreen } from '../screens/ngo/NgoHomeScreen';
 
@@ -71,6 +72,8 @@ function renderScreen(current: Nav) {
       return <ProviderProfileScreen variant="doctor" />;
     case 'doctor-patients':
       return <ProviderPatientsScreen />;
+    case 'doctor-content':
+      return <DoctorContentScreen />;
     case 'ngo-home':
       return <NgoHomeScreen />;
     case 'ngo-profile':

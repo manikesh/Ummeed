@@ -20,6 +20,7 @@ export type Nav =
   | { name: 'doctor-home' }
   | { name: 'doctor-profile' }
   | { name: 'doctor-patients' }
+  | { name: 'doctor-content' }
   // ngo
   | { name: 'ngo-home' }
   | { name: 'ngo-profile' }

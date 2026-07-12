@@ -5,6 +5,7 @@ import { Card } from '../../components/Card';
 import { Screen } from '../../components/Screen';
 import { SuccessMessage } from '../../components/SuccessMessage';
 import { supabase } from '../../lib/supabase';
+import { isProviderProfileComplete } from '../../lib/providerProfile';
 import type { Profile } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
 
@@ -27,7 +28,8 @@ export function AdminApprovalsScreen() {
       Alert.alert('Load error', error.message);
       return;
     }
-    setList((data as Profile[]) ?? []);
+    const profiles = (data as Profile[]) ?? [];
+    setList(filter === 'pending' ? profiles.filter(isProviderProfileComplete) : profiles);
   }, [filter]);
 
   useEffect(() => {
@@ -85,6 +87,8 @@ export function AdminApprovalsScreen() {
           {p.license_number ? <Text style={styles.body}>License: {p.license_number}</Text> : null}
           {p.registration_number ? <Text style={styles.body}>Reg. No: {p.registration_number}</Text> : null}
           {p.specialization ? <Text style={styles.body}>Specialization: {p.specialization}</Text> : null}
+          {p.organization_name && p.full_name ? <Text style={styles.body}>Contact: {p.full_name}</Text> : null}
+          {p.address ? <Text style={styles.body}>Address: {p.address}</Text> : null}
           {p.phone ? <Text style={styles.body}>Phone: {p.phone}</Text> : null}
 
           <View style={styles.row}>

@@ -12,6 +12,7 @@ interface Props {
   cityTestID?: string;
   stateTestID?: string;
   showState?: boolean;
+  cityError?: string | null;
 }
 
 export function CityStateAutocomplete({
@@ -22,6 +23,7 @@ export function CityStateAutocomplete({
   cityTestID,
   stateTestID,
   showState = true,
+  cityError,
 }: Props) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<CityState[]>([]);
@@ -62,6 +64,7 @@ export function CityStateAutocomplete({
             value={city}
             onChangeText={handleCityChange}
             placeholder="Search city..."
+            error={cityError}
             onFocus={() => {
               if (city.trim()) {
                 handleCityChange(city);
