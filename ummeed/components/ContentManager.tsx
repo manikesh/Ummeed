@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View, ScrollView } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from './Button';
 import { Card } from './Card';
 import { Input } from './Input';
@@ -15,6 +15,8 @@ interface Props {
   canModerateAll?: boolean;
 }
 
+const NON_ADMIN_UPLOAD_SUCCESS = 'Your content is successfully uploaded, it will be published in 3hrs.';
+
 export function ContentManager({ allowedCategories, canModerateAll = false }: Props) {
   const { profile } = useAuth();
   const [list, setList] = useState<ContentItem[]>([]);
@@ -27,6 +29,8 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [errors, setErrors] = useState<{ title?: string; body?: string }>({});
+  const [hasSubmitError, setHasSubmitError] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,18 +57,39 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
   const add = async () => {
     if (!profile) return;
     setSuccess(null);
-    if (!title.trim()) {
-      Alert.alert('Missing title', 'Please give the content a title.');
+    setErrors({});
+    setHasSubmitError(false);
+
+    const cleanTitle = title.trim();
+    const cleanBody = body.trim();
+    const errs: { title?: string; body?: string } = {};
+
+    if (!cleanTitle) {
+      errs.title = 'Title is required.';
+    } else if (cleanTitle.length < 10) {
+      errs.title = 'Title must be at least 10 characters.';
+    }
+
+    if (!cleanBody) {
+      errs.body = 'Body is required.';
+    } else if (cleanBody.length < 20) {
+      errs.body = 'Body must be at least 20 characters.';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      setHasSubmitError(true);
       return;
     }
+
     setSaving(true);
     const { error } = await supabase.from('content_items').insert({
       category,
-      title,
-      body: body || null,
+      title: cleanTitle,
+      body: cleanBody || null,
       phone: phone || null,
       url: url || null,
-      is_published: true,
+      is_published: canModerateAll, // Non-admins require admin approval
       created_by: profile.id,
     });
     setSaving(false);
@@ -76,7 +101,11 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
     setBody('');
     setPhone('');
     setUrl('');
-    setSuccess('The content data was saved successfully.');
+    setSuccess(
+      canModerateAll
+        ? 'The content data was saved successfully.'
+        : NON_ADMIN_UPLOAD_SUCCESS
+    );
     load();
   };
 
@@ -124,14 +153,31 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
           />
         ))}
       </View>
-      <Input label="Title" value={title} onChangeText={setTitle} placeholder="Title" testID="cnt-title" />
+      {hasSubmitError && (
+        <Text style={styles.banner}>⚠️ Please fix the errors before proceeding.</Text>
+      )}
+      <Input
+        label="Title"
+        value={title}
+        onChangeText={(value) => {
+          setTitle(value);
+          setErrors((prev) => ({ ...prev, title: undefined }));
+        }}
+        placeholder="Title (min 10 characters)"
+        error={errors.title}
+        testID="cnt-title"
+      />
       <Input
         label="Body"
         value={body}
-        onChangeText={setBody}
-        placeholder="Content details/instructions..."
+        onChangeText={(value) => {
+          setBody(value);
+          setErrors((prev) => ({ ...prev, body: undefined }));
+        }}
+        placeholder="Content details/instructions (min 20 characters)..."
         multiline
         numberOfLines={4}
+        error={errors.body}
         style={{ minHeight: 100, textAlignVertical: 'top' }}
         testID="cnt-body"
       />
@@ -172,8 +218,8 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
       )}
       
       {list.map((c) => {
-        const isOwner = profile && c.created_by === profile.id;
-        const canManage = canModerateAll || isOwner;
+        const isOwner = Boolean(profile && c.created_by === profile.id);
+        const canDelete = canModerateAll || isOwner;
         
         return (
           <Card
@@ -186,24 +232,28 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
             {c.phone ? <Text style={styles.body}>📞 {c.phone}</Text> : null}
             {c.url ? <Text style={styles.body}>🔗 {c.url}</Text> : null}
             
-            {canManage && (
+            {canDelete && (
               <View style={styles.row}>
-                <View style={{ flex: 1, marginRight: spacing.sm }}>
-                  <Button
-                    title={c.is_published ? 'Unpublish' : 'Publish'}
-                    variant="ghost"
-                    onPress={() => togglePublish(c)}
-                    testID={`cnt-pub-${c.id}`}
-                  />
-                </View>
-                <View style={{ flex: 1, marginLeft: spacing.sm }}>
-                  <Button
-                    title="Delete"
-                    variant="danger"
-                    onPress={() => remove(c)}
-                    testID={`cnt-del-${c.id}`}
-                  />
-                </View>
+                {canModerateAll ? (
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Button
+                      title={c.is_published ? 'Unpublish' : 'Publish'}
+                      variant="ghost"
+                      onPress={() => togglePublish(c)}
+                      testID={`cnt-pub-${c.id}`}
+                    />
+                  </View>
+                ) : null}
+                {canDelete ? (
+                  <View style={{ flex: 1, marginLeft: canModerateAll ? spacing.sm : 0 }}>
+                    <Button
+                      title="Delete"
+                      variant="danger"
+                      onPress={() => remove(c)}
+                      testID={`cnt-del-${c.id}`}
+                    />
+                  </View>
+                ) : null}
               </View>
             )}
           </Card>
@@ -216,6 +266,15 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  banner: {
+    color: colors.danger,
+    fontSize: font.body,
+    fontWeight: font.weightSemi,
+    marginBottom: spacing.md,
+    backgroundColor: '#FFF0F0',
+    borderRadius: 8,
+    padding: spacing.md,
   },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm },
   section: { color: colors.primary, fontSize: font.h3, fontWeight: font.weightBold, marginBottom: spacing.sm },

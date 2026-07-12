@@ -29,6 +29,7 @@ export function BurnIncidentScreen() {
   const [description, setDescription] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -53,6 +54,12 @@ export function BurnIncidentScreen() {
   const save = async () => {
     if (!profile) return;
     setSuccess(null);
+    const errors: Record<string, string> = {};
+    if (!incidentDate.trim()) errors.incidentDate = 'Date of incident is required.';
+    if (!location.trim()) errors.location = 'City is required.';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     setSaving(true);
     const values = {
       patient_id: profile.id,
@@ -73,6 +80,8 @@ export function BurnIncidentScreen() {
       return;
     }
     setBodyPart('');
+    setBurnType('acid');
+    setSeverity('2nd_degree');
     setLocation('');
     setLocationState('');
     setDescription('');
@@ -92,15 +101,19 @@ export function BurnIncidentScreen() {
     setLocationState('');
     setDescription(incident.description ?? '');
     setSuccess(null);
+    setFieldErrors({});
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setBodyPart('');
+    setBurnType('acid');
+    setSeverity('2nd_degree');
     setIncidentDate('');
     setLocation('');
     setLocationState('');
     setDescription('');
+    setFieldErrors({});
   };
 
   const del = async (id: string) => {
@@ -135,14 +148,28 @@ export function BurnIncidentScreen() {
       </View>
 
       <Input label="Body part affected" value={bodyPart} onChangeText={setBodyPart} placeholder="e.g. face, left arm" testID="bi-part" />
-      <DateInput label="Date of incident" value={incidentDate} onChange={setIncidentDate} maximumDate={new Date()} testID="bi-date" />
+      <DateInput
+        label="Date of incident"
+        value={incidentDate}
+        onChange={(value) => {
+          setIncidentDate(value);
+          setFieldErrors((prev) => ({ ...prev, incidentDate: '' }));
+        }}
+        maximumDate={new Date()}
+        error={fieldErrors.incidentDate}
+        testID="bi-date"
+      />
       <CityStateAutocomplete
         city={location}
-        setCity={setLocation}
+        setCity={(value) => {
+          setLocation(value);
+          setFieldErrors((prev) => ({ ...prev, location: '' }));
+        }}
         state={locationState}
         setState={setLocationState}
         showState={false}
         cityTestID="bi-location"
+        cityError={fieldErrors.location}
       />
       <Input
         label="Description (optional)"

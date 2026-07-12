@@ -20,6 +20,7 @@ export function MedicalRecordsScreen() {
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -41,34 +42,20 @@ export function MedicalRecordsScreen() {
     load();
   }, [load]);
 
-  const addTextOnly = async () => {
-    if (!profile) return;
-    setSuccess(null);
-    if (!title.trim()) {
-      Alert.alert('Missing title', 'Please give the record a title.');
-      return;
+  const validateRecord = () => {
+    const errors: Record<string, string> = {};
+    const cleanTitle = title.trim();
+    if (!cleanTitle) {
+      errors.title = 'Record summary title is required.';
+    } else if (cleanTitle.length < 10) {
+      errors.title = 'Record summary title must be at least 10 characters.';
     }
-    setBusy(true);
-    const { error } = await supabase.from('medical_records').insert({
-      patient_id: profile.id,
-      created_by: profile.id,
-      title,
-      notes: notes || null,
-    });
-    setBusy(false);
-    if (error) {
-      Alert.alert('Save error', error.message);
-      return;
-    }
-    setTitle('');
-    setNotes('');
-    setSuccess('Your medical record was saved successfully.');
-    load();
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const uploadAsset = async (uri: string, name: string, mime: string) => {
     if (!profile) return;
-    setSuccess(null);
     const path = `${profile.id}/${Date.now()}-${name}`;
     const resp = await fetch(uri);
     const blob = await resp.blob();
@@ -82,7 +69,7 @@ export function MedicalRecordsScreen() {
     const { error } = await supabase.from('medical_records').insert({
       patient_id: profile.id,
       created_by: profile.id,
-      title: title || name,
+      title: title.trim(),
       notes: notes || null,
       file_path: path,
       mime_type: mime,
@@ -93,11 +80,14 @@ export function MedicalRecordsScreen() {
     }
     setTitle('');
     setNotes('');
+    setFieldErrors({});
     setSuccess('Your medical record was saved successfully.');
     load();
   };
 
   const pickImage = async () => {
+    setSuccess(null);
+    if (!validateRecord()) return;
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.85,
@@ -110,6 +100,8 @@ export function MedicalRecordsScreen() {
   };
 
   const pickDoc = async () => {
+    setSuccess(null);
+    if (!validateRecord()) return;
     const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
     if (res.canceled) return;
     const a = res.assets[0];
@@ -132,12 +124,23 @@ export function MedicalRecordsScreen() {
 
   return (
     <Screen title="Medical records" subtitle="Upload reports, prescriptions or photos.">
-      <Input label="Record title" value={title} onChangeText={setTitle} placeholder="e.g. Discharge summary" testID="mr-title" />
+      <Text style={styles.requiredNote}>Discharge summary is mandatory. Upload at least one file or photo for each record.</Text>
+      <Input
+        label="Record summary title"
+        value={title}
+        onChangeText={(value) => {
+          setTitle(value);
+          setFieldErrors((prev) => ({ ...prev, title: '' }));
+        }}
+        placeholder="e.g. Discharge summary"
+        error={fieldErrors.title}
+        testID="mr-title"
+      />
       <Input
         label="Notes (optional)"
         value={notes}
         onChangeText={setNotes}
-        placeholder="Doctor's name, hospital…"
+        placeholder="Doctor's name, hospital..."
         multiline
         numberOfLines={3}
         style={{ minHeight: 80, textAlignVertical: 'top' }}
@@ -146,28 +149,23 @@ export function MedicalRecordsScreen() {
       <SuccessMessage message={success} />
       <View style={styles.row}>
         <View style={{ flex: 1, marginRight: spacing.sm }}>
-          <Button title="Add note only" onPress={addTextOnly} loading={busy} variant="ghost" testID="mr-add-note" />
-        </View>
-      </View>
-      <View style={styles.row}>
-        <View style={{ flex: 1, marginRight: spacing.sm }}>
-          <Button title="📷 Photo" onPress={pickImage} loading={busy} variant="secondary" testID="mr-photo" />
+          <Button title="Photo" onPress={pickImage} loading={busy} variant="secondary" testID="mr-photo" />
         </View>
         <View style={{ flex: 1, marginLeft: spacing.sm }}>
-          <Button title="📄 File" onPress={pickDoc} loading={busy} variant="secondary" testID="mr-file" />
+          <Button title="File" onPress={pickDoc} loading={busy} variant="secondary" testID="mr-file" />
         </View>
       </View>
 
       <View style={{ height: spacing.lg }} />
-      <Text style={styles.section}>My records {loading ? '…' : `(${list.length})`}</Text>
+      <Text style={styles.section}>My records {loading ? '...' : `(${list.length})`}</Text>
       {list.length === 0 && !loading ? (
-        <Text style={styles.empty}>No records yet. Start by adding one above.</Text>
+        <Text style={styles.empty}>No records yet. Start by uploading a discharge summary above.</Text>
       ) : null}
       {list.map((r) => (
         <Card
           key={r.id}
           title={r.title}
-          subtitle={`${r.mime_type ?? 'note'}  •  ${new Date(r.created_at).toLocaleDateString()}`}
+          subtitle={`${r.mime_type ?? 'file'}  -  ${new Date(r.created_at).toLocaleDateString()}`}
           testID={`mr-item-${r.id}`}
         >
           {r.notes ? <Text style={styles.body}>{r.notes}</Text> : null}
@@ -183,6 +181,7 @@ export function MedicalRecordsScreen() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', marginBottom: spacing.sm },
   section: { color: colors.primary, fontSize: font.h3, fontWeight: font.weightBold, marginBottom: spacing.sm },
+  requiredNote: { color: colors.warning, fontSize: font.body, fontWeight: font.weightSemi, marginBottom: spacing.md },
   empty: { color: colors.textMuted, fontSize: font.body, fontStyle: 'italic' },
   body: { color: colors.text, fontSize: font.body, marginBottom: spacing.sm },
   path: { color: colors.textMuted, fontSize: font.small },

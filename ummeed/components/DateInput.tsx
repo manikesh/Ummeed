@@ -9,6 +9,7 @@ interface Props {
   onChange: (value: string) => void;
   maximumDate?: Date;
   testID?: string;
+  error?: string | null;
 }
 
 const toDate = (value: string) => {
@@ -23,7 +24,7 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-export function DateInput({ label, value, onChange, maximumDate, testID }: Props) {
+export function DateInput({ label, value, onChange, maximumDate, testID, error }: Props) {
   const [showPicker, setShowPicker] = useState(false);
 
   if (Platform.OS === 'web') {
@@ -36,8 +37,9 @@ export function DateInput({ label, value, onChange, maximumDate, testID }: Props
           max: maximumDate ? formatDate(maximumDate) : undefined,
           onChange: (event: any) => onChange(event.target.value),
           'data-testid': testID,
-          style: webInputStyle,
+          style: { ...webInputStyle, ...(error ? webInputErrorStyle : {}) },
         })}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
     );
   }
@@ -50,10 +52,16 @@ export function DateInput({ label, value, onChange, maximumDate, testID }: Props
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
-      <Pressable style={styles.input} onPress={() => setShowPicker(true)} testID={testID} accessibilityRole="button">
+      <Pressable
+        style={[styles.input, error ? styles.inputError : null]}
+        onPress={() => setShowPicker(true)}
+        testID={testID}
+        accessibilityRole="button"
+      >
         <Text style={value ? styles.value : styles.placeholder}>{value || 'Select date'}</Text>
         <Text style={styles.calendar}>📅</Text>
       </Pressable>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
       {showPicker ? (
         <DateTimePicker value={toDate(value)} mode="date" display="default" maximumDate={maximumDate} onChange={handleChange} />
       ) : null}
@@ -75,9 +83,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  inputError: { borderColor: colors.danger },
   value: { color: colors.text, fontSize: font.body },
   placeholder: { color: colors.textMuted, fontSize: font.body },
   calendar: { fontSize: 22 },
+  error: { color: colors.danger, fontSize: font.small, marginTop: spacing.xs, fontWeight: font.weightSemi },
 });
 
 const webInputStyle: React.CSSProperties = {
@@ -91,4 +101,8 @@ const webInputStyle: React.CSSProperties = {
   color: colors.text,
   fontSize: font.body,
   fontFamily: 'inherit',
+};
+
+const webInputErrorStyle: React.CSSProperties = {
+  borderColor: colors.danger,
 };
