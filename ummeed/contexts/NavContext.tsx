@@ -30,6 +30,7 @@ export type Nav =
   | { name: 'admin-home' }
   | { name: 'admin-approvals' }
   | { name: 'admin-hospitals' }
+  | { name: 'admin-reports' }
   | { name: 'admin-content' };
 
 interface NavCtx {

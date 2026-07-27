@@ -30,6 +30,7 @@ import { AdminApprovalsScreen } from '../screens/admin/AdminApprovalsScreen';
 import { AdminContentScreen } from '../screens/admin/AdminContentScreen';
 import { AdminHomeScreen } from '../screens/admin/AdminHomeScreen';
 import { AdminHospitalsScreen } from '../screens/admin/AdminHospitalsScreen';
+import { AdminReportsScreen } from '../screens/admin/AdminReportsScreen';
 
 function Loader({ label }: { label?: string }) {
   return (
@@ -88,6 +89,8 @@ function renderScreen(current: Nav) {
       return <AdminApprovalsScreen />;
     case 'admin-hospitals':
       return <AdminHospitalsScreen />;
+    case 'admin-reports':
+      return <AdminReportsScreen />;
     case 'admin-content':
       return <AdminContentScreen />;
     default:
