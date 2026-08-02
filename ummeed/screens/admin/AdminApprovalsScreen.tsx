@@ -6,6 +6,7 @@ import { Screen } from '../../components/Screen';
 import { SuccessMessage } from '../../components/SuccessMessage';
 import { supabase } from '../../lib/supabase';
 import { isProviderProfileComplete } from '../../lib/providerProfile';
+import { isPatientProfileComplete } from '../../lib/patientOnboarding';
 import type { Profile } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
 
@@ -21,7 +22,7 @@ export function AdminApprovalsScreen() {
       .from('profiles')
       .select('*')
       .eq('verification_status', filter)
-      .in('role', ['doctor', 'ngo', 'counselor', 'legal_aid', 'volunteer'])
+      .in('role', ['patient', 'doctor', 'ngo', 'counselor', 'legal_aid', 'volunteer'])
       .order('created_at', { ascending: false });
     setLoading(false);
     if (error) {
@@ -29,7 +30,34 @@ export function AdminApprovalsScreen() {
       return;
     }
     const profiles = (data as Profile[]) ?? [];
-    setList(filter === 'pending' ? profiles.filter(isProviderProfileComplete) : profiles);
+    if (filter !== 'pending') {
+      setList(profiles);
+      return;
+    }
+
+    const patientIds = profiles
+      .filter((p) => p.role === 'patient' && isPatientProfileComplete(p))
+      .map((p) => p.id);
+    const [incidentsRes, recordsRes] = patientIds.length
+      ? await Promise.all([
+          supabase.from('burn_incidents').select('patient_id').in('patient_id', patientIds),
+          supabase.from('medical_records').select('patient_id').in('patient_id', patientIds),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+
+    if (incidentsRes.error || recordsRes.error) {
+      Alert.alert('Load error', incidentsRes.error?.message || recordsRes.error?.message || 'Could not load patient onboarding details.');
+      return;
+    }
+
+    const incidentPatientIds = new Set((incidentsRes.data ?? []).map((it: any) => it.patient_id));
+    const recordPatientIds = new Set((recordsRes.data ?? []).map((it: any) => it.patient_id));
+    setList(profiles.filter((p) => {
+      if (p.role === 'patient') {
+        return isPatientProfileComplete(p) && incidentPatientIds.has(p.id) && recordPatientIds.has(p.id);
+      }
+      return isProviderProfileComplete(p);
+    }));
   }, [filter]);
 
   useEffect(() => {
@@ -80,10 +108,12 @@ export function AdminApprovalsScreen() {
       {list.map((p) => (
         <Card
           key={p.id}
-          title={p.organization_name || p.full_name || 'Provider'}
+          title={p.organization_name || p.full_name || (p.role === 'patient' ? 'Patient' : 'Provider')}
           subtitle={`${p.role}  •  ${[p.city, p.state].filter(Boolean).join(', ')}`}
           testID={`appr-item-${p.id}`}
         >
+          {p.role === 'patient' && p.age ? <Text style={styles.body}>Age: {p.age}</Text> : null}
+          {p.role === 'patient' && p.gender ? <Text style={styles.body}>Gender: {p.gender}</Text> : null}
           {p.license_number ? <Text style={styles.body}>License: {p.license_number}</Text> : null}
           {p.registration_number ? <Text style={styles.body}>Reg. No: {p.registration_number}</Text> : null}
           {p.specialization ? <Text style={styles.body}>Specialization: {p.specialization}</Text> : null}

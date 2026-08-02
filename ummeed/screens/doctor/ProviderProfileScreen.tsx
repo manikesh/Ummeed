@@ -41,9 +41,10 @@ function fieldError(value: string): string | undefined {
   return undefined;
 }
 
-export function ProviderProfileScreen({ variant, onboarding = false }: Props) {
+export function ProviderProfileScreen({ variant, onboarding: onboardingProp }: Props) {
   const { profile, refreshProfile, signOut } = useAuth();
-  const { reset } = useNav();
+  const { reset, canBack } = useNav();
+  const onboarding = onboardingProp ?? !canBack;
   const copy = COPY[variant];
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');

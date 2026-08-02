@@ -4,6 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { NavProvider, useNav, type Nav } from '../contexts/NavContext';
 import { colors, font, spacing } from '../theme';
+import { Button } from '../components/Button';
+import { isProviderProfileComplete } from '../lib/providerProfile';
+import { isPatientProfileComplete } from '../lib/patientOnboarding';
 
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { OtpScreen } from '../screens/auth/OtpScreen';
@@ -32,16 +35,35 @@ import { AdminHomeScreen } from '../screens/admin/AdminHomeScreen';
 import { AdminHospitalsScreen } from '../screens/admin/AdminHospitalsScreen';
 import { AdminReportsScreen } from '../screens/admin/AdminReportsScreen';
 
-function Loader({ label }: { label?: string }) {
+function Loader({
+  label,
+  subLabel,
+  onSignOut,
+}: {
+  label?: string;
+  subLabel?: string;
+  onSignOut?: () => void;
+}) {
   return (
     <SafeAreaView style={styles.loadingSafe}>
       <ActivityIndicator size="large" color={colors.primary} />
       {label ? <Text style={styles.loadingText}>{label}</Text> : null}
+      {subLabel ? <Text style={styles.subLabelText}>{subLabel}</Text> : null}
+      {onSignOut ? (
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Sign Out / Reset Session"
+            onPress={onSignOut}
+            variant="ghost"
+            fullWidth={false}
+          />
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
 
-function renderScreen(current: Nav) {
+function renderScreen(current: Nav, profile: any) {
   switch (current.name) {
     case 'welcome':
       return <WelcomeScreen />;
@@ -77,8 +99,12 @@ function renderScreen(current: Nav) {
       return <DoctorContentScreen />;
     case 'ngo-home':
       return <NgoHomeScreen />;
-    case 'ngo-profile':
-      return <ProviderProfileScreen variant="ngo" />;
+    case 'ngo-profile': {
+      const variant = (profile?.role === 'counselor' || profile?.role === 'legal_aid' || profile?.role === 'ngo')
+        ? profile.role
+        : 'ngo';
+      return <ProviderProfileScreen variant={variant} />;
+    }
     case 'ngo-patients':
       return <ProviderPatientsScreen />;
     case 'ngo-content':
@@ -100,13 +126,34 @@ function renderScreen(current: Nav) {
 
 function InnerSwitcher() {
   const { current } = useNav();
-  return <View style={{ flex: 1, backgroundColor: colors.bg }}>{renderScreen(current)}</View>;
+  const { profile } = useAuth();
+  return <View style={{ flex: 1, backgroundColor: colors.bg }}>{renderScreen(current, profile)}</View>;
 }
 
 export function RootNavigator() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, signOut } = useAuth();
+  const [showTimeoutWarning, setShowTimeoutWarning] = React.useState(false);
 
-  if (loading) return <Loader label="Starting Ummeed…" />;
+  React.useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setShowTimeoutWarning(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowTimeoutWarning(false);
+    }
+  }, [loading]);
+
+  if (loading) {
+    return (
+      <Loader
+        label="Starting Ummeed…"
+        subLabel={showTimeoutWarning ? "Connecting to Supabase is taking longer than expected. Please check your internet connection or server status." : undefined}
+        onSignOut={showTimeoutWarning ? signOut : undefined}
+      />
+    );
+  }
 
   if (!session) {
     return (
@@ -116,20 +163,34 @@ export function RootNavigator() {
     );
   }
 
-  if (!profile) return <Loader label="Loading profile…" />;
+  if (!profile) {
+    return (
+      <Loader
+        label="Loading profile…"
+        subLabel="If this takes too long, your session might be stale or the database schema changed. Tap reset below to sign out and log in again."
+        onSignOut={signOut}
+      />
+    );
+  }
 
   // Decide initial route by role + verification status
   let initial: Nav;
   if (profile.role === 'admin') {
     initial = { name: 'admin-home' };
   } else if (profile.role === 'patient') {
-    initial = { name: 'patient-home' };
-  } else if (profile.verification_status !== 'approved') {
-    initial = { name: 'pending-approval' };
-  } else if (profile.role === 'doctor') {
-    initial = { name: 'doctor-home' };
+    const isPatientComplete = isPatientProfileComplete(profile);
+    initial = isPatientComplete ? { name: 'patient-home' } : { name: 'patient-profile' };
   } else {
-    initial = { name: 'ngo-home' };
+    const isProviderComplete = isProviderProfileComplete(profile);
+    if (!isProviderComplete) {
+      initial = profile.role === 'doctor' ? { name: 'doctor-profile' } : { name: 'ngo-profile' };
+    } else if (profile.verification_status !== 'approved') {
+      initial = { name: 'pending-approval' };
+    } else if (profile.role === 'doctor') {
+      initial = { name: 'doctor-home' };
+    } else {
+      initial = { name: 'ngo-home' };
+    }
   }
 
   // Key forces remount when the role/status changes so the stack resets cleanly.
@@ -142,6 +203,8 @@ export function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
-  loadingSafe: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { color: colors.text, fontSize: font.body, marginTop: spacing.md },
+  loadingSafe: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  loadingText: { color: colors.text, fontSize: font.body, fontWeight: font.weightBold, marginTop: spacing.md, textAlign: 'center' },
+  subLabelText: { color: colors.textMuted, fontSize: font.small, marginTop: spacing.sm, textAlign: 'center', paddingHorizontal: spacing.md },
+  buttonContainer: { marginTop: spacing.lg, width: '100%', alignItems: 'center' },
 });

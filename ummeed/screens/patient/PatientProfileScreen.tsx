@@ -6,11 +6,14 @@ import { CityStateAutocomplete } from '../../components/CityStateAutocomplete';
 import { Screen } from '../../components/Screen';
 import { SuccessMessage } from '../../components/SuccessMessage';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNav } from '../../contexts/NavContext';
+import { getPatientOnboardingStatus } from '../../lib/patientOnboarding';
 import { supabase } from '../../lib/supabase';
 import { colors, font, spacing } from '../../theme';
 
 export function PatientProfileScreen() {
   const { profile, refreshProfile } = useAuth();
+  const { reset, canBack } = useNav();
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
   const [age, setAge] = useState(profile?.age ? String(profile.age) : '');
@@ -70,6 +73,7 @@ export function PatientProfileScreen() {
         state,
         emergency_contact_name: ecName,
         emergency_contact_phone: ecPhone,
+        verification_status: !canBack ? 'pending' : profile.verification_status,
       })
       .eq('id', profile.id);
     setSaving(false);
@@ -77,7 +81,30 @@ export function PatientProfileScreen() {
       setErr(error.message);
       return;
     }
+    const updatedProfile = {
+      ...profile,
+      full_name: fullName,
+      phone,
+      age: Number.isFinite(ageNum) ? ageNum : null,
+      gender,
+      city,
+      state,
+      emergency_contact_name: ecName,
+      emergency_contact_phone: ecPhone,
+      verification_status: !canBack ? 'pending' as const : profile.verification_status,
+    };
     await refreshProfile();
+    if (updatedProfile.verification_status === 'pending') {
+      const onboarding = await getPatientOnboardingStatus(updatedProfile);
+      if (onboarding.isComplete) {
+        reset({ name: 'pending-approval' });
+        return;
+      }
+    }
+    if (!canBack) {
+      reset({ name: 'patient-home' });
+      return;
+    }
     setSuccess('Your profile data was saved successfully.');
   };
 

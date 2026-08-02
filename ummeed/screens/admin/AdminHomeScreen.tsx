@@ -14,7 +14,7 @@ export function AdminHomeScreen() {
       hideBack
       rightAction={{ label: 'Sign out', onPress: signOut }}
     >
-      <Card title="User approvals" subtitle="Approve or reject doctors, NGOs, counselors and legal aid." onPress={() => push({ name: 'admin-approvals' })} testID="ah-approvals" />
+      <Card title="User approvals" subtitle="Approve or reject patients, doctors, NGOs, counselors and legal aid." onPress={() => push({ name: 'admin-approvals' })} testID="ah-approvals" />
       <Card title="Reports" subtitle="View people, hospitals, content and recent activity." onPress={() => push({ name: 'admin-reports' })} testID="ah-reports" />
       <Card title="Hospitals" subtitle="Add, edit and remove hospitals." onPress={() => push({ name: 'admin-hospitals' })} testID="ah-hospitals" />
       <Card title="Content (first-aid, helplines, schemes)" subtitle="Manage published content." onPress={() => push({ name: 'admin-content' })} testID="ah-content" />

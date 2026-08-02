@@ -95,22 +95,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      setSession(data.session ?? null);
-      if (data.session?.user) {
-        await loadProfile(data.session.user.id);
+
+    async function initAuth() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (!mounted) return;
+        setSession(data.session ?? null);
+        if (data.session?.user) {
+          await loadProfile(data.session.user.id);
+        }
+      } catch (err) {
+        console.warn('[Auth] Error initializing session:', err);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    }
+
+    initAuth();
+
     const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
+      if (!mounted) return;
       setSession(s);
-      if (s?.user) {
-        await loadProfile(s.user.id);
-      } else {
+      try {
+        if (s?.user) {
+          await loadProfile(s.user.id);
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.warn('[Auth] Error loading profile on auth change:', err);
         setProfile(null);
       }
     });
+
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
@@ -134,6 +154,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Please enter a valid 10-digit Indian mobile number.');
       }
       const p = normalizePhone(phone);
+
+      // Pre-verification: check if the phone number exists in public.profiles
+      const formattedPhone = toE164(p);
+      let phoneExists = false;
+      try {
+        const { data: exists, error } = await supabase.rpc('check_phone_exists', { p_phone: formattedPhone });
+        if (!error) {
+          phoneExists = !!exists;
+        } else {
+          console.warn('[Auth] check_phone_exists RPC error, falling back to direct profiles query:', error.message);
+          const { data: directData } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('phone', formattedPhone)
+            .maybeSingle();
+          phoneExists = !!directData;
+        }
+      } catch (err) {
+        console.warn('[Auth] Pre-verification lookup failed:', err);
+      }
+
+      if (isSignUp) {
+        if (phoneExists) {
+          throw new Error('An account with this mobile number already exists. Please sign in instead.');
+        }
+      } else {
+        if (!phoneExists) {
+          throw new Error('No account found for this mobile number. Please register first.');
+        }
+      }
+
       pendingSignup = { phone: p, role: intendedRole ?? 'patient', fullName };
 
       if (USE_OTP_BYPASS) {
@@ -168,27 +219,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const syntheticEmail = phoneToEmail(p);
       const password = devPassword(p);
 
-      // 1) try signin
-      const signIn = await supabase.auth.signInWithPassword({
-        email: syntheticEmail,
-        password,
-      });
-
-      if (!signIn.error) {
-        // User exists. If trying to sign up, block it.
-        if (isSignUp) {
-          await supabase.auth.signOut();
-          throw new Error('An account with this mobile number already exists. Please sign in instead.');
+      if (!isSignUp) {
+        // Sign In path: try to sign in
+        const signIn = await supabase.auth.signInWithPassword({
+          email: syntheticEmail,
+          password,
+        });
+        if (signIn.error) {
+          throw new Error('No account found for this mobile number. Please register first.');
         }
         return;
       }
 
-      // If sign-in failed (user doesn't exist) and not signing up, block it.
-      if (!isSignUp) {
-        throw new Error('No account found for this mobile number. Please register first.');
-      }
-
-      // 2) sign up (auto-confirm is on)
+      // Registration path: sign up directly (will fail if email/user already exists)
       const meta =
         pendingSignup && pendingSignup.phone === p
           ? {
@@ -197,12 +240,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               phone: toE164(p),
             }
           : { role: 'patient' as AppRole, full_name: '', phone: toE164(p) };
+
       const signUp = await supabase.auth.signUp({
         email: syntheticEmail,
         password,
         options: { data: meta },
       });
-      if (signUp.error) throw signUp.error;
+
+      if (signUp.error) {
+        if (signUp.error.message.includes('already') || signUp.error.status === 400) {
+          throw new Error('An account with this mobile number already exists. Please sign in instead.');
+        }
+        throw signUp.error;
+      }
 
       // 3) retry signin if needed
       if (!signUp.data.session) {

@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
+import { isPatientProfileComplete } from '../../lib/patientOnboarding';
 import { supabase } from '../../lib/supabase';
 import type { BurnIncident, Connection, ContentItem, Hospital, MedicalRecord, Profile } from '../../lib/types';
 import { colors, font, radius, spacing } from '../../theme';
@@ -112,15 +113,26 @@ export function AdminReportsScreen() {
   const patients = useMemo(() => data.profiles.filter((p) => p.role === 'patient'), [data.profiles]);
   const providers = useMemo(() => data.profiles.filter((p) => PROVIDER_ROLES.includes(p.role)), [data.profiles]);
 
-  const summary = useMemo(() => ({
-    patients: patients.length,
-    providers: providers.length,
-    hospitals: data.hospitals.length,
-    burnIncidents: data.incidents.length,
-    records: data.records.length,
-    pendingApprovals: providers.filter((p) => p.verification_status === 'pending').length,
-    pendingContent: data.content.filter((c) => !c.is_published).length,
-  }), [data, patients, providers]);
+  const summary = useMemo(() => {
+    const incidentPatientIds = new Set(data.incidents.map((i) => i.patient_id));
+    const recordPatientIds = new Set(data.records.map((r) => r.patient_id));
+    const pendingPatientsReady = patients.filter((p) => (
+      p.verification_status === 'pending'
+      && isPatientProfileComplete(p)
+      && incidentPatientIds.has(p.id)
+      && recordPatientIds.has(p.id)
+    ));
+
+    return {
+      patients: patients.length,
+      providers: providers.length,
+      hospitals: data.hospitals.length,
+      burnIncidents: data.incidents.length,
+      records: data.records.length,
+      pendingApprovals: pendingPatientsReady.length + providers.filter((p) => p.verification_status === 'pending').length,
+      pendingContent: data.content.filter((c) => !c.is_published).length,
+    };
+  }, [data, patients, providers]);
 
   const activity = useMemo<ActivityItem[]>(() => {
     const items: ActivityItem[] = [];

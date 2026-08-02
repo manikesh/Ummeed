@@ -8,12 +8,15 @@ import { Input } from '../../components/Input';
 import { Screen } from '../../components/Screen';
 import { SuccessMessage } from '../../components/SuccessMessage';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNav } from '../../contexts/NavContext';
+import { getPatientOnboardingStatus } from '../../lib/patientOnboarding';
 import { supabase } from '../../lib/supabase';
 import type { MedicalRecord } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
 
 export function MedicalRecordsScreen() {
   const { profile } = useAuth();
+  const { reset } = useNav();
   const [list, setList] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
@@ -82,6 +85,13 @@ export function MedicalRecordsScreen() {
     setNotes('');
     setFieldErrors({});
     setSuccess('Your medical record was saved successfully.');
+    if (profile.verification_status === 'pending') {
+      const onboarding = await getPatientOnboardingStatus(profile);
+      if (onboarding.isComplete) {
+        reset({ name: 'pending-approval' });
+        return;
+      }
+    }
     load();
   };
 

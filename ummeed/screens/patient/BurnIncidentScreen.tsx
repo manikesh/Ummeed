@@ -8,6 +8,8 @@ import { DateInput } from '../../components/DateInput';
 import { SuccessMessage } from '../../components/SuccessMessage';
 import { Screen } from '../../components/Screen';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNav } from '../../contexts/NavContext';
+import { getPatientOnboardingStatus } from '../../lib/patientOnboarding';
 import { supabase } from '../../lib/supabase';
 import type { BurnIncident } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
@@ -17,6 +19,7 @@ const SEVERITIES = ['1st_degree', '2nd_degree', '3rd_degree'];
 
 export function BurnIncidentScreen() {
   const { profile } = useAuth();
+  const { reset } = useNav();
   const [list, setList] = useState<BurnIncident[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -88,6 +91,13 @@ export function BurnIncidentScreen() {
     setIncidentDate('');
     setEditingId(null);
     setSuccess(editingId ? 'Burn incident updated successfully.' : 'Burn incident saved successfully.');
+    if (profile.verification_status === 'pending') {
+      const onboarding = await getPatientOnboardingStatus(profile);
+      if (onboarding.isComplete) {
+        reset({ name: 'pending-approval' });
+        return;
+      }
+    }
     load();
   };
 

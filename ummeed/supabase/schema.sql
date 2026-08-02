@@ -34,7 +34,7 @@ create table if not exists public.profiles (
   avatar_path text,
   city text,
   state text,
-  verification_status public.verification_status not null default 'approved',
+  verification_status public.verification_status not null default 'pending',
   -- patient-specific
   age int,
   gender text,
@@ -55,6 +55,8 @@ create table if not exists public.profiles (
 create index if not exists profiles_role_idx on public.profiles(role);
 create index if not exists profiles_verification_idx on public.profiles(verification_status);
 create unique index if not exists profiles_phone_unique on public.profiles(phone) where phone is not null;
+
+alter table public.profiles alter column verification_status set default 'pending';
 
 -- ---------------------------------------------------------------------
 -- 3) hospitals  (admin-managed)
@@ -185,7 +187,7 @@ exception when duplicate_object then null; end $$;
 
 -- ---------------------------------------------------------------------
 -- 9) Auto-create profile on signup
---    role is read from user_metadata; doctor/ngo/etc start as 'pending'
+--    role is read from user_metadata; users start as 'pending'
 -- ---------------------------------------------------------------------
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -200,10 +202,7 @@ begin
     else 'patient'
   end;
 
-  v_status := case
-    when desired_role = 'patient' then 'approved'::public.verification_status
-    else 'pending'::public.verification_status
-  end;
+  v_status := 'pending'::public.verification_status;
 
   insert into public.profiles (id, role, full_name, phone, verification_status)
   values (
@@ -548,3 +547,21 @@ where not exists (
 --   update public.profiles set role='admin', verification_status='approved'
 --   where id = (select id from auth.users where email='admin@ummeed.org');
 -- ---------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------
+-- 16) Helper RPC to check if a phone number exists (publicly accessible)
+-- ---------------------------------------------------------------------
+create or replace function public.check_phone_exists(p_phone text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return exists (
+    select 1 from public.profiles where phone = p_phone
+  );
+end;
+$$;
+
+grant execute on function public.check_phone_exists(text) to anon, authenticated;

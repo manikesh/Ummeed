@@ -26,7 +26,7 @@ export function PendingApprovalScreen() {
       <View style={{ height: spacing.lg }} />
       <Button
         title="Review submitted profile"
-        onPress={() => push({ name: profile?.role === 'doctor' ? 'doctor-profile' : 'ngo-profile' })}
+        onPress={() => push({ name: profile?.role === 'patient' ? 'patient-profile' : profile?.role === 'doctor' ? 'doctor-profile' : 'ngo-profile' })}
         testID="pending-review-profile"
       />
       <View style={{ height: spacing.sm }} />
