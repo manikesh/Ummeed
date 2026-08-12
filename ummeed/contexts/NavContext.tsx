@@ -29,6 +29,7 @@ export type Nav =
   // admin
   | { name: 'admin-home' }
   | { name: 'admin-approvals' }
+  | { name: 'admin-patient-review'; patientId: string }
   | { name: 'admin-hospitals' }
   | { name: 'admin-reports' }
   | { name: 'admin-content' };

@@ -33,6 +33,7 @@ import { AdminApprovalsScreen } from '../screens/admin/AdminApprovalsScreen';
 import { AdminContentScreen } from '../screens/admin/AdminContentScreen';
 import { AdminHomeScreen } from '../screens/admin/AdminHomeScreen';
 import { AdminHospitalsScreen } from '../screens/admin/AdminHospitalsScreen';
+import { AdminPatientReviewScreen } from '../screens/admin/AdminPatientReviewScreen';
 import { AdminReportsScreen } from '../screens/admin/AdminReportsScreen';
 
 function Loader({
@@ -113,6 +114,8 @@ function renderScreen(current: Nav, profile: any) {
       return <AdminHomeScreen />;
     case 'admin-approvals':
       return <AdminApprovalsScreen />;
+    case 'admin-patient-review':
+      return <AdminPatientReviewScreen patientId={current.patientId} />;
     case 'admin-hospitals':
       return <AdminHospitalsScreen />;
     case 'admin-reports':

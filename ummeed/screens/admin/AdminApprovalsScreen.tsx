@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Screen } from '../../components/Screen';
 import { SuccessMessage } from '../../components/SuccessMessage';
+import { useNav } from '../../contexts/NavContext';
 import { supabase } from '../../lib/supabase';
 import { isProviderProfileComplete } from '../../lib/providerProfile';
 import { isPatientProfileComplete } from '../../lib/patientOnboarding';
@@ -11,6 +12,7 @@ import type { Profile } from '../../lib/types';
 import { colors, font, spacing } from '../../theme';
 
 export function AdminApprovalsScreen() {
+  const { push } = useNav();
   const [list, setList] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
@@ -120,6 +122,17 @@ export function AdminApprovalsScreen() {
           {p.organization_name && p.full_name ? <Text style={styles.body}>Contact: {p.full_name}</Text> : null}
           {p.address ? <Text style={styles.body}>Address: {p.address}</Text> : null}
           {p.phone ? <Text style={styles.body}>Phone: {p.phone}</Text> : null}
+
+          {p.role === 'patient' ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <Button
+                title="View complete patient details"
+                variant="ghost"
+                onPress={() => push({ name: 'admin-patient-review', patientId: p.id })}
+                testID={`appr-review-patient-${p.id}`}
+              />
+            </View>
+          ) : null}
 
           <View style={styles.row}>
             {filter !== 'approved' ? (

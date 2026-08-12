@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from './Button';
-import { Card } from './Card';
+import { ContentItemCard } from './ContentItemCard';
 import { Input } from './Input';
 import { MediaUploader } from './MediaUploader';
 import { SuccessMessage } from './SuccessMessage';
@@ -257,16 +257,12 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
         const canManage = canModerateAll || isOwner;
         
         return (
-          <Card
+          <ContentItemCard
             key={c.id}
-            title={c.title}
+            item={c}
             subtitle={`${c.category.replace('_', ' ')}${c.is_published ? '' : '  •  unpublished'}`}
             testID={`cnt-item-${c.id}`}
           >
-            {c.body ? <Text style={styles.body}>{c.body}</Text> : null}
-            {c.phone ? <Text style={styles.body}>📞 {c.phone}</Text> : null}
-            {c.url ? <Text style={styles.body}>🔗 {c.url}</Text> : null}
-            
             {canManage && (
               <View style={styles.row}>
                 <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -297,7 +293,7 @@ export function ContentManager({ allowedCategories, canModerateAll = false }: Pr
                 </View>
               </View>
             )}
-          </Card>
+          </ContentItemCard>
         );
       })}
     </View>
@@ -320,6 +316,5 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm },
   section: { color: colors.primary, fontSize: font.h3, fontWeight: font.weightBold, marginBottom: spacing.sm },
   row: { flexDirection: 'row', marginTop: spacing.sm },
-  body: { color: colors.text, fontSize: font.body, marginBottom: 2, lineHeight: 24 },
   empty: { color: colors.textMuted, fontSize: font.body, fontStyle: 'italic', marginVertical: spacing.md },
 });
