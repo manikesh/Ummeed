@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Screen } from '../../components/Screen';
@@ -17,6 +17,7 @@ export function AdminPatientReviewScreen({ patientId }: Props) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [incidents, setIncidents] = useState<BurnIncident[]>([]);
   const [records, setRecords] = useState<MedicalRecord[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -35,9 +36,24 @@ export function AdminPatientReviewScreen({ patientId }: Props) {
       return;
     }
 
-    setProfile((profileRes.data as Profile) ?? null);
+    const patient = (profileRes.data as Profile) ?? null;
+    setProfile(patient);
     setIncidents((incidentsRes.data as BurnIncident[]) ?? []);
     setRecords((recordsRes.data as MedicalRecord[]) ?? []);
+
+    if (!patient?.avatar_path) {
+      setAvatarUrl(null);
+      return;
+    }
+    const { data, error: photoError } = await supabase.storage
+      .from('profile_photos')
+      .createSignedUrl(patient.avatar_path, 60 * 5);
+    if (photoError) {
+      Alert.alert('Photo error', photoError.message);
+      setAvatarUrl(null);
+      return;
+    }
+    setAvatarUrl(data?.signedUrl ?? null);
   }, [patientId]);
 
   useEffect(() => {
@@ -75,6 +91,7 @@ export function AdminPatientReviewScreen({ patientId }: Props) {
       rightAction={{ label: 'Back', onPress: back }}
     >
       <Card title="Patient profile" subtitle={`Status: ${profile?.verification_status ?? 'unknown'}`}>
+        {avatarUrl ? <Image source={{ uri: avatarUrl }} style={styles.patientPhoto} /> : <Text style={styles.empty}>No patient photo uploaded.</Text>}
         <Detail label="Name" value={profile?.full_name} />
         <Detail label="Phone" value={profile?.phone} />
         <Detail label="Age" value={profile?.age ? String(profile.age) : null} />
@@ -155,6 +172,7 @@ const styles = StyleSheet.create({
   detail: { marginBottom: spacing.sm },
   label: { color: colors.textMuted, fontSize: font.small, fontWeight: font.weightSemi },
   value: { color: colors.text, fontSize: font.body, marginTop: 2 },
+  patientPhoto: { width: 160, height: 160, borderRadius: 80, alignSelf: 'center', marginBottom: spacing.md, backgroundColor: colors.border },
   empty: { color: colors.textMuted, fontSize: font.body, fontStyle: 'italic', marginBottom: spacing.md },
   actions: { flexDirection: 'row', marginTop: spacing.md },
   actionButton: { flex: 1, marginRight: spacing.sm },

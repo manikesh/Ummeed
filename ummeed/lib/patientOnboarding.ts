@@ -8,6 +8,7 @@ export function isPatientProfileComplete(profile: Profile): boolean {
     && profile.age
     && profile.gender?.trim()
     && profile.city?.trim()
+    && profile.avatar_path?.trim()
   );
 }
 
